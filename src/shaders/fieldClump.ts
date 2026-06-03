@@ -56,35 +56,34 @@ ${noiseGLSL}
 
 void main() {
   float edge = smoothstep(0.015, 0.20, vUv.x) * smoothstep(0.985, 0.78, vUv.x);
+  float top = smoothstep(1.02, 0.64, vUv.y);
   float ragged = fbm(vec2(vUv.x * 7.0 + vPhase, vUv.y * 9.5 + vWorldPos.x * 0.05));
-  float fineRagged = fbm(vec2(vUv.x * 28.0 + vPhase * 1.7, vUv.y * 19.0 + vWorldPos.z * 0.025));
-  float bladeStripes = sin(vUv.x * 72.0 + fineRagged * 8.0 + vPhase) * 0.5 + 0.5;
-  float verticalCuts = smoothstep(0.34, 0.86, bladeStripes + ragged * 0.28);
-  float brokenTop = 0.52 + ragged * 0.22 + verticalCuts * 0.16 + fineRagged * 0.10;
-  float top = smoothstep(1.02, brokenTop, vUv.y);
+  float verticalCuts = smoothstep(0.48, 0.88, sin(vUv.x * 36.0 + ragged * 7.0 + vPhase) * 0.5 + 0.5);
+  float reedLines = smoothstep(0.62, 0.92, sin(vUv.x * 74.0 + ragged * 6.0 + vPhase * 1.6) * 0.5 + 0.5);
   float depth = max(0.0, -vWorldPos.z);
   float foreground = 1.0 - smoothstep(68.0, 210.0, depth);
   float horizonBand = smoothstep(300.0, 620.0, depth);
-  float baseMass = smoothstep(0.08, 0.48, ragged + (1.0 - vUv.y) * 0.50);
-  float bladeBreakup = mix(0.62, 1.12, verticalCuts) * mix(0.82, 1.14, fineRagged);
-  float alpha = edge * top * baseMass * mix(0.72, 1.08, vDensity) * bladeBreakup;
-  alpha *= 1.16 + foreground * 0.28 + horizonBand * 0.22;
-  if (alpha < 0.18) {
+  float alpha = edge * top * mix(0.60, 1.0, vDensity) * (0.66 + verticalCuts * 0.34);
+  alpha *= smoothstep(0.18, 0.72, ragged + (1.0 - vUv.y) * 0.42);
+  alpha *= 0.76 + reedLines * 0.24 + foreground * 0.12;
+  alpha *= mix(1.0, 0.58, horizonBand);
+  if (alpha < 0.22) {
     discard;
   }
 
   float rootShade = smoothstep(1.0, 0.0, vUv.y);
-  float bladePepper = smoothstep(0.48, 0.90, ragged * 0.58 + verticalCuts * 0.30 + fineRagged * 0.20);
-  vec3 col = mix(vec3(0.102, 0.196, 0.030), vec3(0.042, 0.110, 0.014), rootShade * 0.56);
-  col = mix(col, vec3(0.032, 0.096, 0.010), verticalCuts * vDensity * (0.12 + foreground * 0.06));
-  col = mix(col, vec3(0.034, 0.092, 0.011), horizonBand * (0.10 + bladePepper * 0.06));
-  col += vec3(0.070, 0.112, 0.012) * ragged * 0.092;
-  col = mix(col, vec3(0.144, 0.118, 0.026), bladePepper * smoothstep(0.48, 1.0, vUv.y) * 0.08);
+  float bladePepper = smoothstep(0.55, 0.92, ragged * 0.72 + verticalCuts * 0.26);
+  vec3 col = mix(vec3(0.056, 0.118, 0.014), vec3(0.018, 0.050, 0.006), rootShade * 0.58);
+  col = mix(col, vec3(0.010, 0.034, 0.004), verticalCuts * vDensity * (0.10 + foreground * 0.08));
+  col = mix(col, vec3(0.012, 0.038, 0.004), horizonBand * (0.18 + bladePepper * 0.08));
+  col += vec3(0.040, 0.064, 0.006) * ragged * 0.070;
+  col += vec3(0.028, 0.052, 0.004) * reedLines * foreground * 0.090;
+  col = mix(col, vec3(0.130, 0.098, 0.018), bladePepper * smoothstep(0.44, 1.0, vUv.y) * 0.10);
   float fog = redFogAmount(vWorldPos, uCameraPos, uFogDensity, uFogStart, uFogHeightMin, uFogHeightMax, uFogHeightStrength);
-  vec3 clumpFog = mix(uFogColor, vec3(0.038, 0.088, 0.010), smoothstep(80.0, 360.0, depth) * 0.76);
-  col = mix(col, clumpFog, fog * 0.28);
+  vec3 clumpFog = mix(uFogColor, vec3(0.024, 0.052, 0.006), smoothstep(80.0, 360.0, depth) * 0.76);
+  col = mix(col, clumpFog, fog * 0.36);
   if (uDebugMode == 3) {
     col = vec3(0.0, vDensity * 0.18, 0.0);
   }
-  fragColor = vec4(col, alpha * (0.68 + vDensity * 0.26) * mix(1.0, 0.82, horizonBand));
+  fragColor = vec4(col, alpha * (0.42 + vDensity * 0.24) * mix(1.0, 0.68, horizonBand));
 }`;

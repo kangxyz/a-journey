@@ -4,6 +4,10 @@ const mobileNativeVolume = 0.24;
 const masterTargetGain = 0.34;
 const fadeInSeconds = 1.4;
 
+function clampVolume(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
 export class BroadcastAudio {
   private readonly audio: HTMLAudioElement;
   private readonly nativeOnly: boolean;
@@ -83,7 +87,7 @@ export class BroadcastAudio {
   }
 
   private playNativeOnly(): void {
-    this.audio.volume = Math.min(this.audio.volume, mobileNativeVolume * 0.35);
+    this.audio.volume = clampVolume(Math.min(this.audio.volume, mobileNativeVolume * 0.35));
     this.fadeNativeVolume(mobileNativeVolume);
 
     try {
@@ -180,8 +184,8 @@ export class BroadcastAudio {
     const startVolume = this.audio.volume;
 
     const step = (now: number): void => {
-      const t = Math.min(1, (now - startedAt) / (fadeInSeconds * 1000));
-      this.audio.volume = startVolume + (targetVolume - startVolume) * t;
+      const t = Math.min(1, Math.max(0, (now - startedAt) / (fadeInSeconds * 1000)));
+      this.audio.volume = clampVolume(startVolume + (targetVolume - startVolume) * t);
 
       if (t < 1) {
         this.nativeFadeHandle = requestAnimationFrame(step);

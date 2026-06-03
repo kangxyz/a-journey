@@ -75,112 +75,50 @@ export class FieldClumpSystem {
   private makeInstances(config: SceneConfig): FieldClump[] {
     const rng = new RNG(config.seed + 3300);
     const instances: FieldClump[] = [];
-    const attemptCount = Math.round(1420 * config.grass.fieldClumpScale);
-    const forwardX = Math.sin(config.camera.yaw);
-    const forwardZ = Math.cos(config.camera.yaw);
-    const rightX = -Math.cos(config.camera.yaw);
-    const rightZ = Math.sin(config.camera.yaw);
+    const attemptCount = Math.round(940 * config.grass.fieldClumpScale);
 
     for (let i = 0; i < attemptCount; i++) {
       const bandRoll = rng.next();
-      const zone = bandRoll < 0.22 ? "foreground" : bandRoll < 0.72 ? "mid" : "horizon";
       const zDepth =
-        zone === "foreground" ? rng.float(44, 210) :
-        zone === "mid" ? rng.float(120, 520) :
-        rng.float(360, 940);
-      const widthAtDepth =
-        zone === "foreground" ? 30 + zDepth * 1.85 :
-        zone === "mid" ? 58 + zDepth * 2.10 :
-        96 + zDepth * 2.55;
-      const sideRoll = rng.next();
-      const sideBias = zone === "foreground" && sideRoll < 0.58;
-      const side = rng.next() < 0.5 ? -1 : 1;
-      const x = sideBias ? side * rng.float(widthAtDepth * 0.34, widthAtDepth * 1.03) : rng.float(-widthAtDepth, widthAtDepth);
+        bandRoll < 0.30 ? rng.float(8, 125) :
+        bandRoll < 0.84 ? rng.float(48, 360) :
+        rng.float(270, 680);
+      const widthAtDepth = bandRoll < 0.30 ? 38 + zDepth * 2.00 : 48 + zDepth * 2.50;
+      const x = rng.float(-widthAtDepth, widthAtDepth);
       const z = -zDepth;
       const macro = fbm2(x * 0.018, z * 0.024, config.seed + 3301, 4);
       const fine = fbm2(x * 0.085, z * 0.115, config.seed + 3302, 3);
       const row = 0.5 + 0.5 * Math.sin(z * 0.085 + x * 0.018 + macro * 4.5);
-      const broadBreak = fbm2(x * 0.008, z * 0.013, config.seed + 3304, 3);
-      const density = smoothstep(0.50, 0.88, macro * 0.58 + fine * 0.20 + row * 0.16 + broadBreak * 0.18);
+      const density = smoothstep(0.48, 0.86, macro * 0.68 + fine * 0.22 + row * 0.20);
+      const foreground = 1 - smoothstep(55, 190, zDepth);
       const horizonBand = smoothstep(260, 520, zDepth);
-      const viewT = (z - config.camera.position[2]) / Math.min(-0.01, forwardZ);
-      const viewCenterX = config.camera.position[0] + forwardX * Math.max(0, viewT);
-      const centerDistance = Math.abs(x - viewCenterX);
 
-      if (zone === "foreground" && centerDistance < rng.float(12, 30) && rng.next() < 0.72) {
+      if (rng.next() > 0.16 + density * 0.46 + foreground * 0.22 + horizonBand * 0.06) {
         continue;
       }
 
-      const keep =
-        zone === "foreground" ? 0.16 + density * 0.34 + (sideBias ? 0.16 : 0.0) :
-        zone === "mid" ? 0.16 + density * 0.48 + row * 0.08 :
-        0.30 + density * 0.44 + horizonBand * 0.14;
-
-      if (rng.next() > keep) {
-        continue;
-      }
-
-      const foregroundScale = zone === "foreground" ? 1.0 : 0.0;
-      const horizonScale = zone === "horizon" ? 1.0 : 0.0;
+      const foregroundScale = bandRoll < 0.30 ? 1.0 : 0.0;
+      const horizonScale = bandRoll >= 0.84 ? 1.0 : 0.0;
       const midScale = 1.0 - Math.max(foregroundScale, horizonScale);
-      const lowMat = 0.70 + broadBreak * 0.34 + density * 0.36;
       instances.push({
         x,
         z,
         y: terrainHeight(x, z, config.seed, config.terrain.heightAmplitude) - rng.float(0.04, 0.16),
         rotation: rng.float(0, Math.PI * 2),
         width:
-          rng.float(0.42, 1.48) * (0.82 + density * 0.72) * foregroundScale +
-          rng.float(0.52, 2.05) * lowMat * midScale +
-          rng.float(0.46, 2.10) * (0.64 + density * 0.46) * horizonScale,
+          rng.float(0.22, 0.88) * (0.78 + density * 0.78 + foreground * 0.68) * foregroundScale +
+          rng.float(0.30, 1.15) * (0.76 + density * 0.88) * midScale +
+          rng.float(0.48, 1.72) * (0.62 + density * 0.42) * horizonScale,
         height:
-          rng.float(0.54, 1.48) * (0.84 + density * 0.52) * foregroundScale +
-          rng.float(0.24, 0.76) * (0.78 + density * 0.58) * midScale +
-          rng.float(0.16, 0.48) * (0.80 + density * 0.38) * horizonScale,
-        density: Math.min(1, density + foregroundScale * 0.12 + horizonScale * 0.10),
+          rng.float(0.26, 0.94) * (0.72 + density * 0.80 + foreground * 0.72) * foregroundScale +
+          rng.float(0.10, 0.40) * (0.70 + density * 0.72) * midScale +
+          rng.float(0.06, 0.18) * (0.72 + density * 0.36) * horizonScale,
+        density: Math.min(1, density + foregroundScale * 0.16 + horizonScale * 0.04),
         phase: rng.float(0, Math.PI * 2)
       });
     }
 
-    const addComposedClump = (screenOffset: number, depth: number, width: number, height: number, density: number): void => {
-      const x = config.camera.position[0] + forwardX * depth + rightX * screenOffset + rng.float(-5.5, 5.5);
-      const z = config.camera.position[2] + forwardZ * depth + rightZ * screenOffset + rng.float(-8.0, 8.0);
-      instances.push({
-        x,
-        z,
-        y: terrainHeight(x, z, config.seed, config.terrain.heightAmplitude) + rng.float(-0.02, 0.04),
-        rotation: config.camera.yaw + rng.float(-0.34, 0.34),
-        width: width * rng.float(0.78, 1.28),
-        height: height * rng.float(0.76, 1.22),
-        density: Math.min(1, density * rng.float(0.86, 1.12)),
-        phase: rng.float(0, Math.PI * 2)
-      });
-    };
-
-    for (let i = 0; i < 54; i++) {
-      const side = rng.next() < 0.52 ? -1 : 1;
-      const edgeBias = rng.next() < 0.54 ? rng.float(48, 160) * side : rng.float(-150, 160);
-      const depth = rng.float(28, 128) + Math.abs(edgeBias) * 0.12;
-      addComposedClump(
-        edgeBias,
-        depth,
-        rng.float(0.46, 1.72),
-        rng.float(0.76, 1.72),
-        rng.float(0.82, 1.0)
-      );
-    }
-
-    for (let i = 0; i < 16; i++) {
-      addComposedClump(
-        rng.float(-185, 205),
-        rng.float(285, 610),
-        rng.float(0.55, 2.20),
-        rng.float(0.24, 0.60),
-        rng.float(0.62, 0.92)
-      );
-    }
-
-    instances.sort((a, b) => a.z - b.z);
+    instances.sort((a, b) => b.z - a.z);
     return instances;
   }
 
