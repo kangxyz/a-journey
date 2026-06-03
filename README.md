@@ -43,6 +43,7 @@ npm run preview
 - `W` / `A` / `S` / `D` to move.
 - `Shift` to sprint.
 - `F` to show or hide debug stats.
+- On touch devices, use the lower-left touch joystick to move and drag on the right side of the screen to look around.
 - Background music starts after the first click, key press, or touch interaction.
 
 ## URL Parameters
@@ -77,10 +78,17 @@ The project includes a Playwright scene verifier. It captures screenshots, check
 npm run verify
 ```
 
+Run the mobile verifier whenever interaction, layout, rendering, or performance behavior changes:
+
+```bash
+npm run verify:mobile
+```
+
 Set `TARGET_URL` to verify a specific local page:
 
 ```bash
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify
+TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile
 ```
 
 Verifier screenshots are written to `artifacts/`, which is ignored by Git.

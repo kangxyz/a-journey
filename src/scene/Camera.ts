@@ -42,6 +42,9 @@ export class Camera {
     if (input.isDown("KeyS")) move = vec3.sub(move, flatForward);
     if (input.isDown("KeyD")) move = vec3.add(move, flatRight);
     if (input.isDown("KeyA")) move = vec3.sub(move, flatRight);
+    const [touchRight, touchForward] = input.getTouchMove();
+    if (touchForward !== 0) move = vec3.add(move, vec3.scale(flatForward, touchForward));
+    if (touchRight !== 0) move = vec3.add(move, vec3.scale(flatRight, touchRight));
 
     const len = vec3.length(move);
     if (len > 0) {

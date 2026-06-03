@@ -24,6 +24,7 @@ Default mode is performance-conscious. Do not trade away the quiet default profi
 - Preserve existing URL controls: `?quality=low|balanced|high`, `?fps=`, and `?scale=`.
 - Do not add UI controls unless the user asks. Debug stats are toggled with `F`.
 - Avoid adding draw calls for visual tweaks when shader or instancing changes are enough.
+- Mobile is a first-class target. Preserve touch movement and touch-look behavior when changing input, layout, render sizing, or camera behavior.
 - Keep `target/` as local reference material only. It is ignored by Git and should not be required at runtime.
 - Generated output belongs in `dist/` or `artifacts/`; both are ignored.
 
@@ -59,13 +60,16 @@ When rendering behavior changes, run the scene verifier against the default page
 
 ```bash
 TARGET_URL="http://127.0.0.1:5181/" npm run verify
+TARGET_URL="http://127.0.0.1:5181/" npm run verify:mobile
 ```
 
 For quality-path changes, also verify:
 
 ```bash
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify
+TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile
 TARGET_URL="http://127.0.0.1:5181/?quality=high" npm run verify
+TARGET_URL="http://127.0.0.1:5181/?quality=high" npm run verify:mobile
 ```
 
 The verifier writes screenshots to `artifacts/`. Inspect screenshots when visual quality is part of the request.

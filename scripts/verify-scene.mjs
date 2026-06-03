@@ -3,10 +3,13 @@ import { inflateSync } from "node:zlib";
 import { chromium } from "playwright-core";
 
 const targetUrl = process.env.TARGET_URL ?? "http://127.0.0.1:5181/";
+const verifyDevice = process.env.VERIFY_DEVICE === "mobile" ? "mobile" : "desktop";
+const isMobile = verifyDevice === "mobile";
+const viewport = isMobile ? { width: 390, height: 844 } : { width: 1365, height: 768 };
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
-const screenshotPath = `artifacts/scene-check-${runId}.png`;
-const skyTurnScreenshotPath = `artifacts/scene-check-sky-turn-${runId}.png`;
-const latestScreenshotPath = "artifacts/scene-check.png";
+const screenshotPath = `artifacts/scene-check-${verifyDevice}-${runId}.png`;
+const skyTurnScreenshotPath = `artifacts/scene-check-sky-turn-${verifyDevice}-${runId}.png`;
+const latestScreenshotPath = `artifacts/scene-check-${verifyDevice}.png`;
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 await mkdir("artifacts", { recursive: true });
@@ -20,11 +23,16 @@ const browser = await chromium.launch({
     "--ignore-gpu-blocklist",
     "--enable-webgl",
     "--use-angle=swiftshader",
-    "--window-size=1365,768"
+    `--window-size=${viewport.width},${viewport.height}`
   ]
 });
 
-const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({
+  viewport,
+  deviceScaleFactor: isMobile ? 2 : 1,
+  hasTouch: isMobile,
+  isMobile
+});
 const messages = [];
 const pageErrors = [];
 
@@ -109,16 +117,21 @@ const canvasStats = await page.evaluate(() => {
     avg: [red / count, green / count, blue / count],
     nonBlackRatio: nonBlack / count,
     redDominantRatio: redDominant / count,
+    touchControlsPresent: Boolean(document.querySelector(".touch-controls")),
     overlayText: overlay?.textContent ?? ""
   };
 });
 
 const screenshot = await page.screenshot({ path: screenshotPath, fullPage: false });
 await page.screenshot({ path: latestScreenshotPath, fullPage: false });
-await page.mouse.move(500, 260);
-await page.mouse.down();
-await page.mouse.move(760, 292, { steps: 14 });
-await page.mouse.up();
+if (isMobile) {
+  await dragTouchPointer(page, viewport.width * 0.70, viewport.height * 0.42, viewport.width * 0.88, viewport.height * 0.45, 14, 31);
+} else {
+  await page.mouse.move(500, 260);
+  await page.mouse.down();
+  await page.mouse.move(760, 292, { steps: 14 });
+  await page.mouse.up();
+}
 await page.waitForTimeout(360);
 const skyTurnScreenshot = await page.screenshot({ path: skyTurnScreenshotPath, fullPage: false });
 await page.keyboard.press("F");
@@ -128,9 +141,22 @@ await page.waitForFunction(
   { timeout: 5000 }
 );
 const debugTextBeforeMove = await page.locator(".debug-overlay").textContent();
-await page.keyboard.down("w");
-await page.waitForTimeout(900);
-await page.keyboard.up("w");
+if (isMobile) {
+  await holdTouchPointer(
+    page,
+    viewport.width * 0.22,
+    viewport.height * 0.78,
+    viewport.width * 0.22,
+    viewport.height * 0.64,
+    14,
+    900,
+    41
+  );
+} else {
+  await page.keyboard.down("w");
+  await page.waitForTimeout(900);
+  await page.keyboard.up("w");
+}
 await page.waitForTimeout(250);
 const debugTextAfterMove = await page.locator(".debug-overlay").textContent();
 await browser.close();
@@ -143,6 +169,7 @@ console.log(
   JSON.stringify(
     {
       targetUrl,
+      verifyDevice,
       screenshotPath,
       skyTurnScreenshotPath,
       latestScreenshotPath,
@@ -164,8 +191,55 @@ if (pageErrors.length > 0 || messages.some((message) => message.startsWith("erro
   process.exitCode = 1;
 } else if (screenshotStats.nonBlackRatio < 0.2 || screenshotStats.redDominantRatio < 0.2) {
   process.exitCode = 2;
+} else if (isMobile && !canvasStats.touchControlsPresent) {
+  process.exitCode = 4;
 } else if (!debugTextBeforeMove?.includes("Draw") || !debugTextBeforeMove.includes("Grass inst") || !cameraMoved || skyCameraDelta.avgAbsDiff < 1.8) {
   process.exitCode = 3;
+}
+
+async function dragTouchPointer(page, startX, startY, endX, endY, steps, pointerId) {
+  await dispatchTouchPointer(page, "pointerdown", startX, startY, pointerId);
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    await dispatchTouchPointer(page, "pointermove", startX + (endX - startX) * t, startY + (endY - startY) * t, pointerId);
+    await page.waitForTimeout(16);
+  }
+  await dispatchTouchPointer(page, "pointerup", endX, endY, pointerId);
+}
+
+async function holdTouchPointer(page, startX, startY, endX, endY, steps, holdMs, pointerId) {
+  await dispatchTouchPointer(page, "pointerdown", startX, startY, pointerId);
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    await dispatchTouchPointer(page, "pointermove", startX + (endX - startX) * t, startY + (endY - startY) * t, pointerId);
+    await page.waitForTimeout(16);
+  }
+  await page.waitForTimeout(holdMs);
+  await dispatchTouchPointer(page, "pointerup", endX, endY, pointerId);
+}
+
+async function dispatchTouchPointer(page, type, x, y, pointerId) {
+  await page.evaluate(
+    ({ type, x, y, pointerId }) => {
+      const canvas = document.querySelector("canvas");
+      if (!(canvas instanceof HTMLCanvasElement)) return;
+      const target = type === "pointerdown" ? canvas : window;
+      target.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId,
+          pointerType: "touch",
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+          buttons: type === "pointerup" ? 0 : 1,
+          pressure: type === "pointerup" ? 0 : 0.5
+        })
+      );
+    },
+    { type, x, y, pointerId }
+  );
 }
 
 function parseCameraZ(text) {
