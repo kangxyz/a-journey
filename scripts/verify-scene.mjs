@@ -6,6 +6,7 @@ const targetUrl = process.env.TARGET_URL ?? "http://127.0.0.1:5181/";
 const verifyDevice = process.env.VERIFY_DEVICE === "mobile" ? "mobile" : "desktop";
 const isMobile = verifyDevice === "mobile";
 const verifyOrientation = isMobile && process.env.VERIFY_ORIENTATION === "landscape" ? "landscape" : "portrait";
+const simulateUnsupportedFullscreen = isMobile && process.env.VERIFY_FULLSCREEN_UNSUPPORTED === "1";
 const verifyLabel = isMobile ? `${verifyDevice}-${verifyOrientation}` : verifyDevice;
 const viewport = isMobile
   ? verifyOrientation === "landscape"
@@ -41,7 +42,22 @@ const page = await browser.newPage({
 });
 
 if (isMobile) {
-  await page.addInitScript(() => {
+  await page.addInitScript((unsupportedFullscreen) => {
+    if (unsupportedFullscreen) {
+      Object.defineProperty(Element.prototype, "requestFullscreen", {
+        configurable: true,
+        value: undefined
+      });
+      Object.defineProperty(Element.prototype, "webkitRequestFullscreen", {
+        configurable: true,
+        value: undefined
+      });
+      Object.defineProperty(HTMLElement.prototype, "webkitRequestFullscreen", {
+        configurable: true,
+        value: undefined
+      });
+    }
+
     const audioVerify = {
       playCalls: 0,
       playResolved: 0,
@@ -91,7 +107,7 @@ if (isMobile) {
         return result;
       };
     }
-  });
+  }, simulateUnsupportedFullscreen);
 }
 
 const messages = [];
@@ -139,6 +155,10 @@ const canvasStats = await page.evaluate(() => {
   const browserChromeSwipe = document.querySelector(".browser-chrome-swipe");
   const browserChromeSwipeStyle = browserChromeSwipe instanceof HTMLElement ? getComputedStyle(browserChromeSwipe) : null;
   const scrollingElement = document.scrollingElement;
+  const fullscreenTarget = document.documentElement;
+  const fullscreenSupported =
+    typeof fullscreenTarget.requestFullscreen === "function" ||
+    typeof fullscreenTarget.webkitRequestFullscreen === "function";
 
   if (!(canvas instanceof HTMLCanvasElement)) {
     return { ok: false, reason: "missing canvas" };
@@ -190,6 +210,7 @@ const canvasStats = await page.evaluate(() => {
     redDominantRatio: redDominant / count,
     touchControlsPresent: Boolean(document.querySelector(".touch-controls")),
     fullscreenButtonPresent: Boolean(fullscreenButton),
+    fullscreenSupported,
     fullscreenButtonVisible:
       Boolean(fullscreenButtonStyle) &&
       fullscreenButtonStyle?.display !== "none" &&
@@ -271,6 +292,7 @@ console.log(
       targetUrl,
       verifyDevice,
       verifyOrientation: isMobile ? verifyOrientation : null,
+      simulateUnsupportedFullscreen,
       screenshotPath,
       skyTurnScreenshotPath,
       latestScreenshotPath,
@@ -296,7 +318,8 @@ if (pageErrors.length > 0 || messages.some((message) => message.startsWith("erro
 } else if (
   isMobile &&
   (!canvasStats.touchControlsPresent ||
-    !canvasStats.fullscreenButtonVisible ||
+    (canvasStats.fullscreenSupported && !canvasStats.fullscreenButtonVisible) ||
+    (!canvasStats.fullscreenSupported && canvasStats.fullscreenButtonVisible) ||
     !canvasStats.browserChromeSwipeVisible ||
     !canvasStats.canScrollForBrowserChrome ||
     !canvasStats.manifestHref.includes("manifest.webmanifest"))

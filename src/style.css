@@ -124,6 +124,10 @@ html:fullscreen canvas {
   pointer-events: none;
 }
 
+.fullscreen-button.unsupported {
+  display: none !important;
+}
+
 .fullscreen-button.failed {
   opacity: 0.48;
 }

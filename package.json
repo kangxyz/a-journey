@@ -9,6 +9,7 @@
     "verify": "node scripts/verify-scene.mjs",
     "verify:mobile": "VERIFY_DEVICE=mobile node scripts/verify-scene.mjs",
     "verify:mobile:landscape": "VERIFY_DEVICE=mobile VERIFY_ORIENTATION=landscape node scripts/verify-scene.mjs",
+    "verify:mobile:no-fullscreen": "VERIFY_DEVICE=mobile VERIFY_FULLSCREEN_UNSUPPORTED=1 node scripts/verify-scene.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

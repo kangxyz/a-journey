@@ -24,7 +24,7 @@ Default mode is performance-conscious. Do not trade away the quiet default profi
 - Preserve existing URL controls: `?quality=low|balanced|high`, `?fps=`, and `?scale=`.
 - Do not add UI controls unless the user asks. Debug stats are toggled with `F`.
 - Avoid adding draw calls for visual tweaks when shader or instancing changes are enough.
-- Mobile is a first-class target. Preserve touch movement, touch-look, fullscreen entry, browser-chrome swipe hiding, and touch-unlocked audio when changing input, layout, render sizing, camera behavior, or audio startup.
+- Mobile is a first-class target. Preserve touch movement, touch-look, fullscreen entry when supported, hidden fullscreen UI when unsupported, browser-chrome swipe hiding, and touch-unlocked audio when changing input, layout, render sizing, camera behavior, or audio startup.
 - Keep `target/` as local reference material only. It is ignored by Git and should not be required at runtime.
 - Generated output belongs in `dist/` or `artifacts/`; both are ignored.
 
@@ -62,6 +62,7 @@ When rendering behavior changes, run the scene verifier against the default page
 TARGET_URL="http://127.0.0.1:5181/" npm run verify
 TARGET_URL="http://127.0.0.1:5181/" npm run verify:mobile
 TARGET_URL="http://127.0.0.1:5181/" npm run verify:mobile:landscape
+TARGET_URL="http://127.0.0.1:5181/" npm run verify:mobile:no-fullscreen
 ```
 
 For quality-path changes, also verify:
@@ -70,9 +71,11 @@ For quality-path changes, also verify:
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile:landscape
+TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile:no-fullscreen
 TARGET_URL="http://127.0.0.1:5181/?quality=high" npm run verify
 TARGET_URL="http://127.0.0.1:5181/?quality=high" npm run verify:mobile
 TARGET_URL="http://127.0.0.1:5181/?quality=high" npm run verify:mobile:landscape
+TARGET_URL="http://127.0.0.1:5181/?quality=high" npm run verify:mobile:no-fullscreen
 ```
 
 The verifier writes screenshots to `artifacts/`. Inspect screenshots when visual quality is part of the request.

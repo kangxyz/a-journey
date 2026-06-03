@@ -9,6 +9,7 @@ type WebkitFullscreenElement = HTMLElement & {
 export class MobileFullscreenButton {
   private readonly button: HTMLButtonElement;
   private readonly scrollZone: HTMLDivElement;
+  private readonly fullscreenSupported: boolean;
 
   private readonly handlePointerDown = (): void => {
     void this.enterFullscreen();
@@ -19,11 +20,13 @@ export class MobileFullscreenButton {
   };
 
   constructor(root: HTMLElement) {
+    this.fullscreenSupported = supportsElementFullscreen();
     this.button = document.createElement("button");
     this.button.type = "button";
     this.button.className = "fullscreen-button";
     this.button.setAttribute("aria-label", "Enter fullscreen");
     this.button.innerHTML = '<span class="fullscreen-glyph" aria-hidden="true"></span>';
+    this.button.classList.toggle("unsupported", !this.fullscreenSupported);
 
     this.scrollZone = document.createElement("div");
     this.scrollZone.className = "browser-chrome-swipe";
@@ -31,7 +34,9 @@ export class MobileFullscreenButton {
 
     root.append(this.button, this.scrollZone);
 
-    this.button.addEventListener("pointerdown", this.handlePointerDown, { passive: true });
+    if (this.fullscreenSupported) {
+      this.button.addEventListener("pointerdown", this.handlePointerDown, { passive: true });
+    }
     document.addEventListener("fullscreenchange", this.handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", this.handleFullscreenChange);
     this.updateVisibility();
@@ -46,6 +51,7 @@ export class MobileFullscreenButton {
   }
 
   private async enterFullscreen(): Promise<void> {
+    if (!this.fullscreenSupported) return;
     const target = document.documentElement as WebkitFullscreenElement;
 
     try {
@@ -67,6 +73,11 @@ export class MobileFullscreenButton {
 
   private updateVisibility(): void {
     const fullscreenElement = document.fullscreenElement ?? (document as WebkitFullscreenDocument).webkitFullscreenElement;
-    this.button.classList.toggle("hidden", Boolean(fullscreenElement));
+    this.button.classList.toggle("hidden", !this.fullscreenSupported || Boolean(fullscreenElement));
   }
+}
+
+function supportsElementFullscreen(): boolean {
+  const target = document.documentElement as WebkitFullscreenElement;
+  return typeof target.requestFullscreen === "function" || typeof target.webkitRequestFullscreen === "function";
 }

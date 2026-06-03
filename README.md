@@ -46,7 +46,7 @@ npm run preview
 - `Shift` to sprint.
 - `F` to show or hide debug stats.
 - On touch devices, use the lower-left touch joystick to move and drag on the right side of the screen to look around.
-- On touch devices, use the fullscreen button to hide browser chrome when the browser supports the Fullscreen API.
+- On touch devices, use the fullscreen button to hide browser chrome when the browser supports page fullscreen.
 - On touch devices, swipe up from the bottom-center double-chevron area to let the browser collapse its address bar.
 - Background music starts after the first click, key press, or touch interaction.
 
@@ -87,6 +87,7 @@ Run the mobile verifier whenever interaction, layout, rendering, or performance 
 ```bash
 npm run verify:mobile
 npm run verify:mobile:landscape
+npm run verify:mobile:no-fullscreen
 ```
 
 Set `TARGET_URL` to verify a specific local page:
@@ -95,6 +96,7 @@ Set `TARGET_URL` to verify a specific local page:
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile:landscape
+TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile:no-fullscreen
 ```
 
 Verifier screenshots are written to `artifacts/`, which is ignored by Git.
