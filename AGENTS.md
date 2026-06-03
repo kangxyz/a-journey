@@ -4,7 +4,7 @@ This file describes how coding agents should work on this project.
 
 ## Project Intent
 
-Red Powerline Walk is a Vite + TypeScript + WebGL2 first-person atmosphere scene. The art direction is red sky, oppressive powerlines, distant mountains, dynamic clouds, and damp dark-green grassland. Keep the project lightweight and self-contained; it does not use a 3D engine.
+A-JOURNEY is a Vite + TypeScript + WebGL2 first-person atmosphere scene. The art direction is red sky, oppressive powerlines, distant mountains, dynamic clouds, and damp dark-green grassland. Keep the project lightweight and self-contained; it does not use a 3D engine.
 
 Default mode is performance-conscious. Do not trade away the quiet default profile unless the user explicitly asks for higher quality.
 

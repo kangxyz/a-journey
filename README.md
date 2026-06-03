@@ -1,4 +1,4 @@
-# Red Powerline Walk
+# A-JOURNEY
 
 A Vite + TypeScript + WebGL2 first-person atmospheric scene. The project renders a red sky, power towers, overhead wires, distant mountains, dynamic clouds, damp dark-green grassland, and background music with a distant broadcast feel.
 
@@ -85,9 +85,20 @@ TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify
 
 Verifier screenshots are written to `artifacts/`, which is ignored by Git.
 
+## Deployment
+
+The project is configured for GitHub Pages at:
+
+```text
+https://kangxyz.github.io/a-journey/
+```
+
+`vite.config.ts` sets the Vite base path to `/a-journey/`, and `.github/workflows/deploy.yml` builds `dist/` and deploys it through GitHub Actions whenever `main` is pushed.
+
 ## Project Structure
 
 ```text
+.github/workflows/       GitHub Pages deployment workflow
 src/app/                 App entry point and render loop
 src/audio/               Background music playback and Web Audio processing
 src/assets/audio/        Audio assets
