@@ -24,7 +24,7 @@ Default mode is performance-conscious. Do not trade away the quiet default profi
 - Preserve existing URL controls: `?quality=low|balanced|high`, `?fps=`, and `?scale=`.
 - Do not add UI controls unless the user asks. Debug stats are toggled with `F`.
 - Avoid adding draw calls for visual tweaks when shader or instancing changes are enough.
-- Mobile is a first-class target. Preserve touch movement, touch-look, fullscreen entry, and touch-unlocked audio when changing input, layout, render sizing, camera behavior, or audio startup.
+- Mobile is a first-class target. Preserve touch movement, touch-look, fullscreen entry, browser-chrome swipe hiding, and touch-unlocked audio when changing input, layout, render sizing, camera behavior, or audio startup.
 - Keep `target/` as local reference material only. It is ignored by Git and should not be required at runtime.
 - Generated output belongs in `dist/` or `artifacts/`; both are ignored.
 

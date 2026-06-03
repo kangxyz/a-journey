@@ -47,6 +47,7 @@ npm run preview
 - `F` to show or hide debug stats.
 - On touch devices, use the lower-left touch joystick to move and drag on the right side of the screen to look around.
 - On touch devices, use the fullscreen button to hide browser chrome when the browser supports the Fullscreen API.
+- On touch devices, swipe up from the bottom-center double-chevron area to let the browser collapse its address bar.
 - Background music starts after the first click, key press, or touch interaction.
 
 ## URL Parameters

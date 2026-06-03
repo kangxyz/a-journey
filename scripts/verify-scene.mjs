@@ -136,6 +136,9 @@ const canvasStats = await page.evaluate(() => {
   const overlay = document.querySelector(".debug-overlay");
   const fullscreenButton = document.querySelector(".fullscreen-button");
   const fullscreenButtonStyle = fullscreenButton instanceof HTMLElement ? getComputedStyle(fullscreenButton) : null;
+  const browserChromeSwipe = document.querySelector(".browser-chrome-swipe");
+  const browserChromeSwipeStyle = browserChromeSwipe instanceof HTMLElement ? getComputedStyle(browserChromeSwipe) : null;
+  const scrollingElement = document.scrollingElement;
 
   if (!(canvas instanceof HTMLCanvasElement)) {
     return { ok: false, reason: "missing canvas" };
@@ -192,6 +195,14 @@ const canvasStats = await page.evaluate(() => {
       fullscreenButtonStyle?.display !== "none" &&
       fullscreenButtonStyle?.visibility !== "hidden" &&
       Number(fullscreenButtonStyle?.opacity ?? 0) > 0,
+    browserChromeSwipePresent: Boolean(browserChromeSwipe),
+    browserChromeSwipeVisible:
+      Boolean(browserChromeSwipeStyle) &&
+      browserChromeSwipeStyle?.display !== "none" &&
+      browserChromeSwipeStyle?.visibility !== "hidden",
+    scrollHeight: scrollingElement?.scrollHeight ?? 0,
+    innerHeight: window.innerHeight,
+    canScrollForBrowserChrome: (scrollingElement?.scrollHeight ?? 0) > window.innerHeight + 40,
     manifestHref: document.querySelector('link[rel="manifest"]')?.getAttribute("href") ?? "",
     overlayText: overlay?.textContent ?? ""
   };
@@ -234,7 +245,20 @@ if (isMobile) {
 }
 await page.waitForTimeout(250);
 const debugTextAfterMove = await page.locator(".debug-overlay").textContent();
-const audioStats = isMobile ? await page.evaluate(() => window.__audioVerify ?? null) : null;
+const audioStats = isMobile
+  ? await page.evaluate(() => {
+      const audio = document.querySelector("audio");
+      return {
+        verify: window.__audioVerify ?? null,
+        elementPresent: audio instanceof HTMLAudioElement,
+        paused: audio instanceof HTMLAudioElement ? audio.paused : null,
+        volume: audio instanceof HTMLAudioElement ? audio.volume : null,
+        readyState: audio instanceof HTMLAudioElement ? audio.readyState : null,
+        currentTime: audio instanceof HTMLAudioElement ? audio.currentTime : null,
+        src: audio instanceof HTMLAudioElement ? audio.currentSrc || audio.src : ""
+      };
+    })
+  : null;
 await browser.close();
 
 const screenshotStats = analyzePngScreenshot(screenshot);
@@ -269,9 +293,27 @@ if (pageErrors.length > 0 || messages.some((message) => message.startsWith("erro
   process.exitCode = 1;
 } else if (screenshotStats.nonBlackRatio < 0.2 || screenshotStats.redDominantRatio < 0.2) {
   process.exitCode = 2;
-} else if (isMobile && (!canvasStats.touchControlsPresent || !canvasStats.fullscreenButtonVisible || !canvasStats.manifestHref.includes("manifest.webmanifest"))) {
+} else if (
+  isMobile &&
+  (!canvasStats.touchControlsPresent ||
+    !canvasStats.fullscreenButtonVisible ||
+    !canvasStats.browserChromeSwipeVisible ||
+    !canvasStats.canScrollForBrowserChrome ||
+    !canvasStats.manifestHref.includes("manifest.webmanifest"))
+) {
   process.exitCode = 4;
-} else if (isMobile && (!audioStats || audioStats.playCalls < 1 || audioStats.playRejected > 0)) {
+} else if (
+  isMobile &&
+  (!audioStats ||
+    !audioStats.elementPresent ||
+    audioStats.paused ||
+    !audioStats.verify ||
+    audioStats.verify.playCalls < 1 ||
+    audioStats.verify.playRejected > 0 ||
+    typeof audioStats.volume !== "number" ||
+    audioStats.volume <= 0 ||
+    audioStats.volume > 0.32)
+) {
   process.exitCode = 5;
 } else if (!debugTextBeforeMove?.includes("Draw") || !debugTextBeforeMove.includes("Grass inst") || !cameraMoved || skyCameraDelta.avgAbsDiff < 1.8) {
   process.exitCode = 3;

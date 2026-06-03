@@ -1,25 +1,33 @@
 const backgroundMusicUrl = new URL("../assets/audio/background.mp3", import.meta.url).href;
 const audioElementVolume = 0.72;
+const mobileNativeVolume = 0.24;
 const masterTargetGain = 0.34;
 const fadeInSeconds = 1.4;
 
 export class BroadcastAudio {
   private readonly audio: HTMLAudioElement;
+  private readonly nativeOnly: boolean;
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private armed = false;
   private starting = false;
+  private nativeFadeHandle = 0;
 
   private readonly startFromGesture = (): void => {
     this.playFromGesture();
   };
 
   constructor() {
+    this.nativeOnly = window.matchMedia("(pointer: coarse)").matches;
     this.audio = new Audio(backgroundMusicUrl);
     this.audio.loop = true;
     this.audio.preload = "auto";
-    this.audio.volume = audioElementVolume;
+    this.audio.volume = this.nativeOnly ? 0 : audioElementVolume;
     this.audio.setAttribute("playsinline", "true");
+    this.audio.setAttribute("webkit-playsinline", "true");
+    this.audio.style.display = "none";
+    document.body.append(this.audio);
+    this.audio.load();
   }
 
   arm(): void {
@@ -35,7 +43,9 @@ export class BroadcastAudio {
 
   dispose(): void {
     this.disarm();
+    cancelAnimationFrame(this.nativeFadeHandle);
     this.audio.pause();
+    this.audio.remove();
     this.audio.src = "";
     void this.context?.close();
     this.context = null;
@@ -44,6 +54,11 @@ export class BroadcastAudio {
   private playFromGesture(): void {
     if (this.starting) return;
     this.starting = true;
+
+    if (this.nativeOnly) {
+      this.playNativeOnly();
+      return;
+    }
 
     try {
       const context = this.ensureGraph();
@@ -63,6 +78,30 @@ export class BroadcastAudio {
           this.starting = false;
         });
     } catch {
+      this.starting = false;
+    }
+  }
+
+  private playNativeOnly(): void {
+    this.audio.volume = Math.min(this.audio.volume, mobileNativeVolume * 0.35);
+    this.fadeNativeVolume(mobileNativeVolume);
+
+    try {
+      void this.audio
+        .play()
+        .then(() => {
+          this.disarm();
+        })
+        .catch(() => {
+          cancelAnimationFrame(this.nativeFadeHandle);
+          this.audio.volume = 0;
+        })
+        .finally(() => {
+          this.starting = false;
+        });
+    } catch {
+      cancelAnimationFrame(this.nativeFadeHandle);
+      this.audio.volume = 0;
       this.starting = false;
     }
   }
@@ -133,6 +172,23 @@ export class BroadcastAudio {
     const now = context.currentTime;
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(0, now);
+  }
+
+  private fadeNativeVolume(targetVolume: number): void {
+    cancelAnimationFrame(this.nativeFadeHandle);
+    const startedAt = performance.now();
+    const startVolume = this.audio.volume;
+
+    const step = (now: number): void => {
+      const t = Math.min(1, (now - startedAt) / (fadeInSeconds * 1000));
+      this.audio.volume = startVolume + (targetVolume - startVolume) * t;
+
+      if (t < 1) {
+        this.nativeFadeHandle = requestAnimationFrame(step);
+      }
+    };
+
+    this.nativeFadeHandle = requestAnimationFrame(step);
   }
 
   private disarm(): void {

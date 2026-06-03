@@ -149,7 +149,70 @@ html:fullscreen canvas {
     linear-gradient(rgba(255, 226, 214, 0.88), rgba(255, 226, 214, 0.88)) 100% 100% / 2px 8px no-repeat;
 }
 
+.browser-chrome-swipe {
+  position: fixed;
+  left: 50%;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 12;
+  display: none;
+  width: 132px;
+  height: 58px;
+  pointer-events: auto;
+  touch-action: pan-y;
+  transform: translateX(-50%);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.browser-chrome-swipe::before,
+.browser-chrome-swipe::after {
+  position: absolute;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border-top: 2px solid rgba(255, 226, 214, 0.58);
+  border-left: 2px solid rgba(255, 226, 214, 0.58);
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.browser-chrome-swipe::before {
+  bottom: 16px;
+}
+
+.browser-chrome-swipe::after {
+  bottom: 28px;
+  opacity: 0.62;
+}
+
 @media (pointer: coarse) {
+  html,
+  body {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+
+  body {
+    min-height: calc(100dvh + 180px);
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  #app {
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
   canvas {
     cursor: default;
   }
@@ -160,6 +223,10 @@ html:fullscreen canvas {
 
   .fullscreen-button {
     display: flex;
+  }
+
+  .browser-chrome-swipe {
+    display: block;
   }
 
   .debug-overlay {

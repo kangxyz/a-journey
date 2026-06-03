@@ -8,6 +8,7 @@ type WebkitFullscreenElement = HTMLElement & {
 
 export class MobileFullscreenButton {
   private readonly button: HTMLButtonElement;
+  private readonly scrollZone: HTMLDivElement;
 
   private readonly handlePointerDown = (): void => {
     void this.enterFullscreen();
@@ -23,7 +24,12 @@ export class MobileFullscreenButton {
     this.button.className = "fullscreen-button";
     this.button.setAttribute("aria-label", "Enter fullscreen");
     this.button.innerHTML = '<span class="fullscreen-glyph" aria-hidden="true"></span>';
-    root.append(this.button);
+
+    this.scrollZone = document.createElement("div");
+    this.scrollZone.className = "browser-chrome-swipe";
+    this.scrollZone.setAttribute("aria-hidden", "true");
+
+    root.append(this.button, this.scrollZone);
 
     this.button.addEventListener("pointerdown", this.handlePointerDown, { passive: true });
     document.addEventListener("fullscreenchange", this.handleFullscreenChange);
@@ -36,6 +42,7 @@ export class MobileFullscreenButton {
     document.removeEventListener("fullscreenchange", this.handleFullscreenChange);
     document.removeEventListener("webkitfullscreenchange", this.handleFullscreenChange);
     this.button.remove();
+    this.scrollZone.remove();
   }
 
   private async enterFullscreen(): Promise<void> {
