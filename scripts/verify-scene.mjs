@@ -5,11 +5,17 @@ import { chromium } from "playwright-core";
 const targetUrl = process.env.TARGET_URL ?? "http://127.0.0.1:5181/";
 const verifyDevice = process.env.VERIFY_DEVICE === "mobile" ? "mobile" : "desktop";
 const isMobile = verifyDevice === "mobile";
-const viewport = isMobile ? { width: 390, height: 844 } : { width: 1365, height: 768 };
+const verifyOrientation = isMobile && process.env.VERIFY_ORIENTATION === "landscape" ? "landscape" : "portrait";
+const verifyLabel = isMobile ? `${verifyDevice}-${verifyOrientation}` : verifyDevice;
+const viewport = isMobile
+  ? verifyOrientation === "landscape"
+    ? { width: 844, height: 390 }
+    : { width: 390, height: 844 }
+  : { width: 1365, height: 768 };
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
-const screenshotPath = `artifacts/scene-check-${verifyDevice}-${runId}.png`;
-const skyTurnScreenshotPath = `artifacts/scene-check-sky-turn-${verifyDevice}-${runId}.png`;
-const latestScreenshotPath = `artifacts/scene-check-${verifyDevice}.png`;
+const screenshotPath = `artifacts/scene-check-${verifyLabel}-${runId}.png`;
+const skyTurnScreenshotPath = `artifacts/scene-check-sky-turn-${verifyLabel}-${runId}.png`;
+const latestScreenshotPath = `artifacts/scene-check-${verifyLabel}.png`;
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 await mkdir("artifacts", { recursive: true });
@@ -33,6 +39,61 @@ const page = await browser.newPage({
   hasTouch: isMobile,
   isMobile
 });
+
+if (isMobile) {
+  await page.addInitScript(() => {
+    const audioVerify = {
+      playCalls: 0,
+      playResolved: 0,
+      playRejected: 0,
+      resumeCalls: 0,
+      resumeResolved: 0,
+      resumeRejected: 0
+    };
+    Object.defineProperty(window, "__audioVerify", {
+      configurable: true,
+      value: audioVerify
+    });
+
+    const originalPlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function (...args) {
+      audioVerify.playCalls += 1;
+      const result = originalPlay.apply(this, args);
+      if (result && typeof result.then === "function") {
+        result.then(
+          () => {
+            audioVerify.playResolved += 1;
+          },
+          () => {
+            audioVerify.playRejected += 1;
+          }
+        );
+      }
+      return result;
+    };
+
+    const audioContextConstructor = window.AudioContext ?? window.webkitAudioContext;
+    const originalResume = audioContextConstructor?.prototype?.resume;
+    if (audioContextConstructor && originalResume) {
+      audioContextConstructor.prototype.resume = function (...args) {
+        audioVerify.resumeCalls += 1;
+        const result = originalResume.apply(this, args);
+        if (result && typeof result.then === "function") {
+          result.then(
+            () => {
+              audioVerify.resumeResolved += 1;
+            },
+            () => {
+              audioVerify.resumeRejected += 1;
+            }
+          );
+        }
+        return result;
+      };
+    }
+  });
+}
+
 const messages = [];
 const pageErrors = [];
 
@@ -65,9 +126,16 @@ await page.waitForFunction(
 );
 await page.waitForTimeout(600);
 
+if (isMobile) {
+  await page.touchscreen.tap(viewport.width * 0.78, viewport.height * 0.72);
+  await page.waitForTimeout(300);
+}
+
 const canvasStats = await page.evaluate(() => {
   const canvas = document.querySelector("canvas");
   const overlay = document.querySelector(".debug-overlay");
+  const fullscreenButton = document.querySelector(".fullscreen-button");
+  const fullscreenButtonStyle = fullscreenButton instanceof HTMLElement ? getComputedStyle(fullscreenButton) : null;
 
   if (!(canvas instanceof HTMLCanvasElement)) {
     return { ok: false, reason: "missing canvas" };
@@ -118,6 +186,13 @@ const canvasStats = await page.evaluate(() => {
     nonBlackRatio: nonBlack / count,
     redDominantRatio: redDominant / count,
     touchControlsPresent: Boolean(document.querySelector(".touch-controls")),
+    fullscreenButtonPresent: Boolean(fullscreenButton),
+    fullscreenButtonVisible:
+      Boolean(fullscreenButtonStyle) &&
+      fullscreenButtonStyle?.display !== "none" &&
+      fullscreenButtonStyle?.visibility !== "hidden" &&
+      Number(fullscreenButtonStyle?.opacity ?? 0) > 0,
+    manifestHref: document.querySelector('link[rel="manifest"]')?.getAttribute("href") ?? "",
     overlayText: overlay?.textContent ?? ""
   };
 });
@@ -159,6 +234,7 @@ if (isMobile) {
 }
 await page.waitForTimeout(250);
 const debugTextAfterMove = await page.locator(".debug-overlay").textContent();
+const audioStats = isMobile ? await page.evaluate(() => window.__audioVerify ?? null) : null;
 await browser.close();
 
 const screenshotStats = analyzePngScreenshot(screenshot);
@@ -170,10 +246,12 @@ console.log(
     {
       targetUrl,
       verifyDevice,
+      verifyOrientation: isMobile ? verifyOrientation : null,
       screenshotPath,
       skyTurnScreenshotPath,
       latestScreenshotPath,
       canvasStats,
+      audioStats,
       screenshotStats,
       skyCameraDelta,
       debugTextBeforeMove,
@@ -191,8 +269,10 @@ if (pageErrors.length > 0 || messages.some((message) => message.startsWith("erro
   process.exitCode = 1;
 } else if (screenshotStats.nonBlackRatio < 0.2 || screenshotStats.redDominantRatio < 0.2) {
   process.exitCode = 2;
-} else if (isMobile && !canvasStats.touchControlsPresent) {
+} else if (isMobile && (!canvasStats.touchControlsPresent || !canvasStats.fullscreenButtonVisible || !canvasStats.manifestHref.includes("manifest.webmanifest"))) {
   process.exitCode = 4;
+} else if (isMobile && (!audioStats || audioStats.playCalls < 1 || audioStats.playRejected > 0)) {
+  process.exitCode = 5;
 } else if (!debugTextBeforeMove?.includes("Draw") || !debugTextBeforeMove.includes("Grass inst") || !cameraMoved || skyCameraDelta.avgAbsDiff < 1.8) {
   process.exitCode = 3;
 }

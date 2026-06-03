@@ -8,9 +8,10 @@ export class BroadcastAudio {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private armed = false;
+  private starting = false;
 
   private readonly startFromGesture = (): void => {
-    void this.play();
+    this.playFromGesture();
   };
 
   constructor() {
@@ -18,15 +19,18 @@ export class BroadcastAudio {
     this.audio.loop = true;
     this.audio.preload = "auto";
     this.audio.volume = audioElementVolume;
+    this.audio.setAttribute("playsinline", "true");
   }
 
   arm(): void {
     if (this.armed) return;
     this.armed = true;
 
-    window.addEventListener("pointerdown", this.startFromGesture, { passive: true });
+    window.addEventListener("pointerdown", this.startFromGesture, { capture: true, passive: true });
+    window.addEventListener("click", this.startFromGesture, { passive: true });
     window.addEventListener("keydown", this.startFromGesture);
-    window.addEventListener("touchstart", this.startFromGesture, { passive: true });
+    window.addEventListener("touchstart", this.startFromGesture, { capture: true, passive: true });
+    window.addEventListener("touchend", this.startFromGesture, { capture: true, passive: true });
   }
 
   dispose(): void {
@@ -37,17 +41,29 @@ export class BroadcastAudio {
     this.context = null;
   }
 
-  private async play(): Promise<void> {
+  private playFromGesture(): void {
+    if (this.starting) return;
+    this.starting = true;
+
     try {
       const context = this.ensureGraph();
-      if (context.state === "suspended") {
-        await context.resume();
-      }
+      const resumePromise = context.state === "suspended" ? context.resume() : Promise.resolve();
 
       this.fadeIn(context);
-      await this.audio.play();
-      this.disarm();
+      const playPromise = this.audio.play();
+
+      void Promise.all([resumePromise, playPromise])
+        .then(() => {
+          this.disarm();
+        })
+        .catch(() => {
+          this.resetFade(context);
+        })
+        .finally(() => {
+          this.starting = false;
+        });
     } catch {
+      this.starting = false;
     }
   }
 
@@ -111,11 +127,21 @@ export class BroadcastAudio {
     gain.linearRampToValueAtTime(masterTargetGain, now + fadeInSeconds);
   }
 
+  private resetFade(context: AudioContext): void {
+    if (!this.masterGain) return;
+    const gain = this.masterGain.gain;
+    const now = context.currentTime;
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(0, now);
+  }
+
   private disarm(): void {
     if (!this.armed) return;
     this.armed = false;
-    window.removeEventListener("pointerdown", this.startFromGesture);
+    window.removeEventListener("pointerdown", this.startFromGesture, { capture: true });
+    window.removeEventListener("click", this.startFromGesture);
     window.removeEventListener("keydown", this.startFromGesture);
-    window.removeEventListener("touchstart", this.startFromGesture);
+    window.removeEventListener("touchstart", this.startFromGesture, { capture: true });
+    window.removeEventListener("touchend", this.startFromGesture, { capture: true });
   }
 }

@@ -1,5 +1,7 @@
 # A-JOURNEY
 
+Live demo: https://kangxyz.github.io/a-journey/
+
 A Vite + TypeScript + WebGL2 first-person atmospheric scene. The project renders a red sky, power towers, overhead wires, distant mountains, dynamic clouds, damp dark-green grassland, and background music with a distant broadcast feel.
 
 ## Features
@@ -44,6 +46,7 @@ npm run preview
 - `Shift` to sprint.
 - `F` to show or hide debug stats.
 - On touch devices, use the lower-left touch joystick to move and drag on the right side of the screen to look around.
+- On touch devices, use the fullscreen button to hide browser chrome when the browser supports the Fullscreen API.
 - Background music starts after the first click, key press, or touch interaction.
 
 ## URL Parameters
@@ -82,6 +85,7 @@ Run the mobile verifier whenever interaction, layout, rendering, or performance 
 
 ```bash
 npm run verify:mobile
+npm run verify:mobile:landscape
 ```
 
 Set `TARGET_URL` to verify a specific local page:
@@ -89,17 +93,12 @@ Set `TARGET_URL` to verify a specific local page:
 ```bash
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify
 TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile
+TARGET_URL="http://127.0.0.1:5181/?quality=low" npm run verify:mobile:landscape
 ```
 
 Verifier screenshots are written to `artifacts/`, which is ignored by Git.
 
 ## Deployment
-
-The project is configured for GitHub Pages at:
-
-```text
-https://kangxyz.github.io/a-journey/
-```
 
 `vite.config.ts` sets the Vite base path to `/a-journey/`, and `.github/workflows/deploy.yml` builds `dist/` and deploys it through GitHub Actions whenever `main` is pushed.
 

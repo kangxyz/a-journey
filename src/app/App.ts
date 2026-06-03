@@ -3,6 +3,7 @@ import { GLDevice } from "../renderer/GLDevice";
 import { DebugOverlay } from "../scene/DebugOverlay";
 import { Input } from "../scene/Input";
 import { Scene } from "../scene/Scene";
+import { MobileFullscreenButton } from "./MobileFullscreenButton";
 
 export class App {
   private readonly canvas: HTMLCanvasElement;
@@ -12,6 +13,7 @@ export class App {
   private readonly scene: Scene;
   private readonly overlay: DebugOverlay;
   private readonly audio: BroadcastAudio;
+  private readonly fullscreenButton: MobileFullscreenButton;
   private readonly targetFrameMs: number;
   private readonly maxRenderPixels: number;
   private readonly renderScale: number;
@@ -33,6 +35,7 @@ export class App {
     this.scene = new Scene(this.device.gl, this.input);
     this.overlay = new DebugOverlay(this.overlayElement);
     this.audio = new BroadcastAudio();
+    this.fullscreenButton = new MobileFullscreenButton(root);
 
     const fps = numberParam(params, "fps") ?? (quality === "high" ? 60 : quality === "low" ? 24 : 30);
     this.targetFrameMs = 1000 / clamp(fps, 24, 60);
@@ -70,6 +73,7 @@ export class App {
   dispose(): void {
     cancelAnimationFrame(this.frameHandle);
     this.audio.dispose();
+    this.fullscreenButton.dispose();
     this.scene.dispose();
     this.input.dispose();
   }

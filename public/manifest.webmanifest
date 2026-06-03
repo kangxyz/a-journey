@@ -1,0 +1,9 @@
+{
+  "name": "A-JOURNEY",
+  "short_name": "A-JOURNEY",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#060000",
+  "theme_color": "#060000"
+}
