@@ -9,6 +9,7 @@ in vec2 vUv;
 out vec4 fragColor;
 
 uniform sampler2D uSceneColor;
+uniform sampler2D uSceneDepth;
 uniform float uTime;
 uniform float uRedBoost;
 uniform float uGreenScale;
@@ -18,6 +19,11 @@ uniform float uVignette;
 uniform float uGrain;
 uniform float uExposure;
 uniform float uGamma;
+uniform float uDofStrength;
+uniform float uDofFocusDistance;
+uniform float uDofRange;
+uniform float uCameraNear;
+uniform float uCameraFar;
 uniform vec2 uTexelSize;
 uniform int uBypass;
 
@@ -53,9 +59,39 @@ vec3 edgeAwareSample(sampler2D tex, vec2 uv) {
   return mix(result, min(result, center * 0.72), darkCore * 0.18);
 }
 
+float linearDepth(float rawDepth) {
+  float z = rawDepth * 2.0 - 1.0;
+  return (2.0 * uCameraNear * uCameraFar) / max(0.0001, uCameraFar + uCameraNear - z * (uCameraFar - uCameraNear));
+}
+
+vec3 depthOfFieldSample(sampler2D tex, vec2 uv, vec3 center, float amount) {
+  vec2 radius = uTexelSize * mix(vec2(0.0), vec2(3.6, 2.2), clamp(amount, 0.0, 1.0));
+  vec3 col = center * 0.28;
+  col += texture(tex, uv + vec2(radius.x, 0.0)).rgb * 0.13;
+  col += texture(tex, uv + vec2(-radius.x, 0.0)).rgb * 0.13;
+  col += texture(tex, uv + vec2(0.0, radius.y)).rgb * 0.13;
+  col += texture(tex, uv + vec2(0.0, -radius.y)).rgb * 0.13;
+  col += texture(tex, uv + radius * vec2(0.78, 0.72)).rgb * 0.10;
+  col += texture(tex, uv - radius * vec2(0.78, 0.72)).rgb * 0.10;
+  return col;
+}
+
 void main() {
   vec3 col = edgeAwareSample(uSceneColor, vUv);
   if (uBypass == 0) {
+    if (uDofStrength > 0.001) {
+      float rawDepth = texture(uSceneDepth, vUv).r;
+      float sceneDepth = linearDepth(rawDepth);
+      float farBlur = smoothstep(uDofFocusDistance, uDofFocusDistance + uDofRange, sceneDepth);
+      float skyBlur = smoothstep(0.9975, 1.0, rawDepth) * smoothstep(0.20, 0.92, vUv.y);
+      float silhouetteProtect = 1.0 - smoothstep(0.018, 0.15, luma(col));
+      float frameFocus = 1.0 - smoothstep(0.12, 0.54, distance(vUv, vec2(0.48, 0.46)));
+      float dof = max(farBlur, skyBlur * 0.76) * uDofStrength;
+      dof *= 1.0 - silhouetteProtect * 0.82;
+      dof *= mix(1.0, 0.72, frameFocus);
+      col = mix(col, depthOfFieldSample(uSceneColor, vUv, col, dof), clamp(dof, 0.0, 0.46));
+    }
+
     float horizonBand = smoothstep(0.14, 0.24, vUv.y) * smoothstep(0.60, 0.36, vUv.y);
     float hazeFlow = fbm(vec2(vUv.x * 9.0 + uTime * 0.012, vUv.y * 4.0));
     float smear = horizonBand * (0.22 + hazeFlow * 0.18);
@@ -77,9 +113,9 @@ void main() {
     col *= mix(1.0 - uVignette, 1.0, vig);
     float bottomCrush = 1.0 - smoothstep(0.02, 0.36, vUv.y);
     float lowerField = (1.0 - smoothstep(0.18, 0.46, vUv.y)) * smoothstep(0.004, 0.075, col.g);
-    col *= 1.0 - bottomCrush * 0.18;
-    col.g *= 1.0 - lowerField * 0.12;
-    col.r *= 1.0 - lowerField * 0.05;
+    col *= 1.0 - bottomCrush * 0.11;
+    col.g *= 1.0 - lowerField * 0.055;
+    col.r *= 1.0 - lowerField * 0.035;
     float redFrame = smoothstep(0.18, 0.72, col.r) * smoothstep(0.42, 0.86, col.r - col.g * 0.65);
     float skyFrame = redFrame * smoothstep(0.18, 0.42, vUv.y);
     float scanRow = floor(vUv.y * 230.0);

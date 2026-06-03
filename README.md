@@ -67,11 +67,20 @@ The default profile is `balanced`. Frame rate and render scale can also be overr
 ?scale=0.78
 ```
 
+Camera and depth-of-field tuning can be overridden for shot tests:
+
+```text
+?fov=48
+?dof=0.34
+?camX=-66&camY=1.30&camZ=66&yaw=3.025&pitch=0.265
+```
+
 Examples:
 
 ```text
 http://127.0.0.1:5181/?quality=low
 http://127.0.0.1:5181/?quality=high&fps=60
+http://127.0.0.1:5181/?fov=44&dof=0.45&pitch=0.22
 ```
 
 ## Verification

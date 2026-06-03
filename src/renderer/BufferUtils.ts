@@ -45,7 +45,8 @@ export function createMeshGpu(gl: WebGL2RenderingContext, mesh: MeshData): MeshG
   const vertexCount = mesh.positions.length / 3;
   const hasNormals = Boolean(mesh.normals);
   const hasUvs = Boolean(mesh.uvs);
-  const stride = (3 + (hasNormals ? 3 : 0) + (hasUvs ? 2 : 0)) * 4;
+  const hasColors = Boolean(mesh.colors);
+  const stride = (3 + (hasNormals ? 3 : 0) + (hasUvs ? 2 : 0) + (hasColors ? 4 : 0)) * 4;
   const packed = new Float32Array(vertexCount * (stride / 4));
   let cursor = 0;
 
@@ -63,6 +64,13 @@ export function createMeshGpu(gl: WebGL2RenderingContext, mesh: MeshData): MeshG
     if (hasUvs && mesh.uvs) {
       packed[cursor++] = mesh.uvs[i * 2 + 0] ?? 0;
       packed[cursor++] = mesh.uvs[i * 2 + 1] ?? 0;
+    }
+
+    if (hasColors && mesh.colors) {
+      packed[cursor++] = mesh.colors[i * 4 + 0] ?? 0;
+      packed[cursor++] = mesh.colors[i * 4 + 1] ?? 0;
+      packed[cursor++] = mesh.colors[i * 4 + 2] ?? 0;
+      packed[cursor++] = mesh.colors[i * 4 + 3] ?? 0;
     }
   }
 
@@ -87,6 +95,12 @@ export function createMeshGpu(gl: WebGL2RenderingContext, mesh: MeshData): MeshG
   if (hasUvs) {
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, offset);
+    offset += 2 * 4;
+  }
+
+  if (hasColors) {
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 4, gl.FLOAT, false, stride, offset);
   }
 
   if (mesh.indices) {

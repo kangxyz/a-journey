@@ -84,5 +84,6 @@ The verifier writes screenshots to `artifacts/`. Inspect screenshots when visual
 
 - The repository tracks source files, scripts, README/AGENTS docs, and runtime assets under `src/assets/`.
 - Do not commit `node_modules/`, `dist/`, `artifacts/`, or `target/`.
+- Do not run `git push` or trigger deployment unless the user explicitly asks for push or deployment in the current task.
 - If moving an asset, update code references and verify `npm run build`.
 - Do not revert user changes unless explicitly asked.

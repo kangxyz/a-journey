@@ -158,12 +158,29 @@ void main() {
   float horizonGrassBand = smoothstep(360.0, 760.0, grassDepth) * (1.0 - smoothstep(1250.0, 1650.0, grassDepth));
   float brokenHorizonGrass = horizonGrassBand * smoothstep(0.36, 0.80, bushMacro * 0.48 + patchNoise * 0.34 + broadFieldSheets * 0.20);
   float strawEdge = smoothstep(0.64, 0.93, drySpeckle * 0.62 + microFiber * 0.26 + meadowRows * 0.14);
+  float targetGrassField = smoothstep(48.0, 120.0, grassDepth) * (1.0 - smoothstep(320.0, 560.0, grassDepth));
+  float targetGrassNoise = smoothstep(0.48, 0.84, bushMacro * 0.34 + bushFine * 0.32 + patchNoise * 0.24 + meadowRows * 0.18);
+  float targetGrassBlades = smoothstep(
+    0.58,
+    0.92,
+    sin(vWorldPos.x * 2.45 + grassDepth * 0.46 + microFiber * 5.8) * 0.5 + 0.5
+  );
+  float targetGrassClumps = targetGrassField * targetGrassNoise * (0.64 + targetGrassBlades * 0.36);
+  float targetHorizonTufts = horizonGrassBand * smoothstep(
+    0.44,
+    0.82,
+    bushFine * 0.42 + patchNoise * 0.30 + sin(vWorldPos.x * 0.075 + bushMacro * 4.0) * 0.14 + 0.14
+  );
   grass = mix(grass, vec3(0.010, 0.040, 0.005), blackEdge * 0.20);
   grass = mix(grass, vec3(0.018, 0.058, 0.007), dampMat * wetForeground * 0.12);
   grass = mix(grass, vec3(0.034, 0.088, 0.010), meadowRows * meadowDepth * 0.21);
   grass = mix(grass, vec3(0.016, 0.052, 0.006), mottledLowGrass * meadowDepth * 0.14);
   grass += vec3(0.048, 0.060, 0.007) * strawEdge * meadowDepth * 0.070;
-  grass = mix(grass, vec3(0.012, 0.040, 0.005), brokenHorizonGrass * 0.18);
+  grass = mix(grass, vec3(0.050, 0.130, 0.017), targetGrassField * (0.20 + patchNoise * 0.10));
+  grass = mix(grass, vec3(0.034, 0.098, 0.012), targetGrassClumps * 0.22);
+  grass += vec3(0.062, 0.118, 0.012) * targetGrassBlades * targetGrassClumps * 0.18;
+  grass = mix(grass, vec3(0.024, 0.076, 0.008), brokenHorizonGrass * 0.18);
+  grass = mix(grass, vec3(0.014, 0.052, 0.005), targetHorizonTufts * 0.18);
   vec3 redPolluted = mix(grass, vec3(0.17, 0.018, 0.0), 0.035 + vUv.y * 0.055);
   float fog = redFogAmount(vWorldPos, uCameraPos, uFogDensity, uFogStart, uFogHeightMin, uFogHeightMax, uFogHeightStrength);
   float farField = smoothstep(300.0, 720.0, -vWorldPos.z);

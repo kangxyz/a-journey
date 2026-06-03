@@ -68,6 +68,8 @@ export interface SceneConfig {
     sagMax: number;
     widthNear: number;
     widthFar: number;
+    windStrength: number;
+    windSpeed: number;
   };
   clouds: {
     sheetCount: number;
@@ -83,6 +85,9 @@ export interface SceneConfig {
     grain: number;
     exposure: number;
     gamma: number;
+    dofStrength: number;
+    dofFocusDistance: number;
+    dofRange: number;
   };
   performance: {
     horizonDetailScale: number;
@@ -94,10 +99,10 @@ export interface SceneConfig {
 export const defaultSceneConfig: SceneConfig = {
   seed: 20260602,
   camera: {
-    position: [-20, 1.62, 24],
-    yaw: Math.PI,
-    pitch: 0.275,
-    fovDeg: 54,
+    position: [-66, 1.30, 66],
+    yaw: 3.025,
+    pitch: 0.265,
+    fovDeg: 50,
     near: 0.05,
     far: 11200,
     moveSpeed: 9.5,
@@ -128,8 +133,8 @@ export const defaultSceneConfig: SceneConfig = {
     baseHeight: 0,
     heightAmplitude: 2.2,
     noiseScale: 0.012,
-    colorDark: [0.028, 0.082, 0.013],
-    colorLight: [0.210, 0.325, 0.060]
+    colorDark: [0.050, 0.132, 0.024],
+    colorLight: [0.315, 0.455, 0.092]
   },
   grass: {
     tileSize: 16,
@@ -158,7 +163,9 @@ export const defaultSceneConfig: SceneConfig = {
     sagMin: 0.06,
     sagMax: 1.10,
     widthNear: 0.028,
-    widthFar: 0.023
+    widthFar: 0.023,
+    windStrength: 0.22,
+    windSpeed: 1.15
   },
   clouds: {
     sheetCount: 5,
@@ -170,10 +177,13 @@ export const defaultSceneConfig: SceneConfig = {
     greenScale: 0.94,
     blueScale: 0.36,
     contrast: 1.32,
-    vignette: 0.22,
+    vignette: 0.27,
     grain: 0.020,
     exposure: 1.02,
-    gamma: 0.96
+    gamma: 0.96,
+    dofStrength: 0.34,
+    dofFocusDistance: 360,
+    dofRange: 520
   },
   performance: {
     horizonDetailScale: 0.65,

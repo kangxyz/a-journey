@@ -142,7 +142,7 @@ export class Scene {
     this.grass.render(frame);
 
     this.fbo.unbind();
-    this.post.render(frame, this.fbo.colorTexture);
+    this.post.render(frame, this.fbo.colorTexture, this.fbo.depthTexture);
   }
 
   private handleDebugKeys(): void {
@@ -181,6 +181,20 @@ export class Scene {
     const config = structuredClone(defaultSceneConfig);
     const params = new URLSearchParams(window.location.search);
     const quality = params.get("quality");
+    const numberParam = (name: string): number | null => {
+      if (!params.has(name)) {
+        return null;
+      }
+      const value = Number(params.get(name));
+      return Number.isFinite(value) ? value : null;
+    };
+    const fov = numberParam("fov");
+    const dof = numberParam("dof");
+    const camX = numberParam("camX");
+    const camY = numberParam("camY");
+    const camZ = numberParam("camZ");
+    const yaw = numberParam("yaw");
+    const pitch = numberParam("pitch");
 
     if (quality === "high") {
       config.world.terrainResolution = 288;
@@ -196,6 +210,9 @@ export class Scene {
       config.poles.count = 76;
       config.wires.samplesNear = 112;
       config.wires.samplesFar = 42;
+      config.wires.windStrength = 0.28;
+      config.wires.windSpeed = 1.25;
+      config.post.dofStrength = 0.42;
       config.clouds.sheetCount = 6;
       config.performance.horizonDetailScale = 1.0;
       config.performance.farTowerStride = 1;
@@ -216,11 +233,42 @@ export class Scene {
       config.poles.count = 40;
       config.wires.samplesNear = 30;
       config.wires.samplesFar = 8;
+      config.wires.windStrength = 0.12;
+      config.wires.windSpeed = 0.95;
       config.clouds.sheetCount = 4;
       config.post.grain = 0.012;
+      config.post.dofStrength = 0.18;
       config.performance.horizonDetailScale = 0.45;
       config.performance.farTowerStride = 3;
       config.performance.farWireMode = "minimal";
+    }
+
+    if (fov !== null) {
+      config.camera.fovDeg = Math.min(72, Math.max(36, fov));
+    }
+
+    if (dof !== null) {
+      config.post.dofStrength = Math.min(0.7, Math.max(0, dof));
+    }
+
+    if (camX !== null) {
+      config.camera.position[0] = Math.min(260, Math.max(-260, camX));
+    }
+
+    if (camY !== null) {
+      config.camera.position[1] = Math.min(2.2, Math.max(0.8, camY));
+    }
+
+    if (camZ !== null) {
+      config.camera.position[2] = Math.min(160, Math.max(-80, camZ));
+    }
+
+    if (yaw !== null) {
+      config.camera.yaw = yaw;
+    }
+
+    if (pitch !== null) {
+      config.camera.pitch = Math.min(0.64, Math.max(-0.16, pitch));
     }
 
     return config;

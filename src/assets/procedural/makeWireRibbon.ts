@@ -20,12 +20,15 @@ export function makeWireRibbon(spans: WireSpan[]): MeshData {
   const centers: number[] = [];
   const tangents: number[] = [];
   const sideWidth: number[] = [];
+  const wind: number[] = [];
   const indices: number[] = [];
   let vertexBase = 0;
 
   for (const span of spans) {
     const samples = Math.max(3, span.samples);
     const points: Vec3[] = [];
+    const phase = wirePhase(span);
+    const spanLength = vec3.length(vec3.sub(span.end, span.start));
 
     for (let i = 0; i <= samples; i++) {
       points.push(pointOnSpan(span, i / samples));
@@ -42,6 +45,9 @@ export function makeWireRibbon(spans: WireSpan[]): MeshData {
         tangents.push(tangent[0], tangent[1], tangent[2]);
       }
       sideWidth.push(-1, span.width, 1, span.width);
+      const t = i / samples;
+      const lengthT = Math.min(1, spanLength / 260);
+      wind.push(t, phase, lengthT, 0, t, phase, lengthT, 0);
     }
 
     for (let i = 0; i < samples; i++) {
@@ -57,6 +63,18 @@ export function makeWireRibbon(spans: WireSpan[]): MeshData {
     positions: new Float32Array(centers),
     normals: new Float32Array(tangents),
     uvs: new Float32Array(sideWidth),
+    colors: new Float32Array(wind),
     indices: indexArray
   };
+}
+
+function wirePhase(span: WireSpan): number {
+  const seed =
+    span.start[0] * 12.9898 +
+    span.start[1] * 78.233 +
+    span.start[2] * 37.719 +
+    span.end[0] * 19.191 +
+    span.end[1] * 41.139 +
+    span.end[2] * 63.731;
+  return Math.sin(seed) * 43758.5453 - Math.floor(Math.sin(seed) * 43758.5453);
 }

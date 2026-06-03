@@ -12,7 +12,7 @@ export class PostProcessSystem {
     this.triangle = new FullscreenTriangle(gl);
   }
 
-  render(frame: FrameContext, sceneColor: WebGLTexture): void {
+  render(frame: FrameContext, sceneColor: WebGLTexture, sceneDepth: WebGLTexture): void {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, frame.width, frame.height);
@@ -25,6 +25,9 @@ export class PostProcessSystem {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, sceneColor);
     this.program.set1i("uSceneColor", 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, sceneDepth);
+    this.program.set1i("uSceneDepth", 1);
     this.program.set1f("uTime", frame.time);
     this.program.set1f("uRedBoost", frame.config.post.redBoost);
     this.program.set1f("uGreenScale", frame.config.post.greenScale);
@@ -34,11 +37,19 @@ export class PostProcessSystem {
     this.program.set1f("uGrain", frame.config.post.grain);
     this.program.set1f("uExposure", frame.config.post.exposure);
     this.program.set1f("uGamma", frame.config.post.gamma);
+    this.program.set1f("uDofStrength", frame.config.post.dofStrength);
+    this.program.set1f("uDofFocusDistance", frame.config.post.dofFocusDistance);
+    this.program.set1f("uDofRange", frame.config.post.dofRange);
+    this.program.set1f("uCameraNear", frame.config.camera.near);
+    this.program.set1f("uCameraFar", frame.config.camera.far);
     this.program.set2f("uTexelSize", 1 / Math.max(1, frame.width), 1 / Math.max(1, frame.height));
     this.program.set1i("uBypass", frame.debugMode === 5 ? 1 : 0);
     this.triangle.render();
     frame.stats.drawCalls += 1;
 
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.depthMask(true);
     gl.enable(gl.DEPTH_TEST);

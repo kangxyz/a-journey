@@ -33,9 +33,12 @@ export class WireSystem {
 
     this.program.use();
     this.program.setMatrix4("uViewProj", frame.viewProj);
+    this.program.set1f("uTime", frame.time);
     this.program.set3fv("uCameraPos", frame.cameraPos);
     this.program.set3fv("uCameraRight", frame.cameraRight);
     this.program.set2f("uViewport", frame.width, frame.height);
+    this.program.set1f("uWindStrength", frame.config.wires.windStrength);
+    this.program.set1f("uWindSpeed", frame.config.wires.windSpeed);
     this.program.set3fv("uFogColor", frame.config.fog.color);
     this.program.set1f("uFogDensity", frame.config.fog.density);
     this.program.set1f("uFogStart", frame.config.fog.start);

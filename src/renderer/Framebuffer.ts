@@ -1,14 +1,14 @@
 export class Framebuffer {
   colorTexture: WebGLTexture;
+  depthTexture: WebGLTexture;
   private fbo: WebGLFramebuffer;
-  private depth: WebGLRenderbuffer;
   private width = 0;
   private height = 0;
 
   constructor(private readonly gl: WebGL2RenderingContext) {
     const fbo = gl.createFramebuffer();
     const color = gl.createTexture();
-    const depth = gl.createRenderbuffer();
+    const depth = gl.createTexture();
 
     if (!fbo || !color || !depth) {
       throw new Error("Failed to create framebuffer resources.");
@@ -16,7 +16,7 @@ export class Framebuffer {
 
     this.fbo = fbo;
     this.colorTexture = color;
-    this.depth = depth;
+    this.depthTexture = depth;
   }
 
   resize(width: number, height: number): void {
@@ -35,19 +35,23 @@ export class Framebuffer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.depth);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, width, height);
+    gl.bindTexture(gl.TEXTURE_2D, this.depthTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.NONE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.colorTexture, 0);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depth);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthTexture, 0);
 
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error("Scene framebuffer is incomplete.");
     }
 
     gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
@@ -62,6 +66,6 @@ export class Framebuffer {
   dispose(): void {
     this.gl.deleteFramebuffer(this.fbo);
     this.gl.deleteTexture(this.colorTexture);
-    this.gl.deleteRenderbuffer(this.depth);
+    this.gl.deleteTexture(this.depthTexture);
   }
 }

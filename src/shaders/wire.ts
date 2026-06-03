@@ -6,31 +6,50 @@ precision highp float;
 layout(location = 0) in vec3 aCenter;
 layout(location = 1) in vec3 aTangent;
 layout(location = 2) in vec2 aSideWidth;
+layout(location = 3) in vec4 aWind;
 
 uniform mat4 uViewProj;
+uniform float uTime;
 uniform vec3 uCameraPos;
 uniform vec3 uCameraRight;
 uniform vec2 uViewport;
+uniform float uWindStrength;
+uniform float uWindSpeed;
 
 out vec3 vWorldPos;
 out float vRibbonSide;
 
 void main() {
-  vec4 centerClip = uViewProj * vec4(aCenter, 1.0);
   vec3 tangent = normalize(aTangent);
-  vec4 tangentClip = uViewProj * vec4(aCenter + tangent, 1.0);
+  float t = aWind.x;
+  float endFade = smoothstep(0.025, 0.18, t) * smoothstep(0.025, 0.18, 1.0 - t);
+  float lengthFade = smoothstep(0.12, 1.0, aWind.z);
+  float dist = distance(aCenter, uCameraPos);
+  float nearFade = 1.0 - smoothstep(780.0, 1900.0, dist);
+  float phase = aWind.y * 6.2831853;
+  float time = uTime * uWindSpeed;
+  vec3 sideAxis = cross(tangent, vec3(0.0, 1.0, 0.0));
+  if (dot(sideAxis, sideAxis) < 0.0001) {
+    sideAxis = vec3(1.0, 0.0, 0.0);
+  }
+  sideAxis = normalize(sideAxis);
+  float longWave = sin(time + phase + t * 6.2831853);
+  float fineWave = sin(time * 1.73 + phase * 1.41 + t * 17.0 + aCenter.z * 0.018);
+  float sway = (longWave * 0.66 + fineWave * 0.34) * uWindStrength * endFade * lengthFade * nearFade;
+  vec3 center = aCenter + sideAxis * sway + vec3(0.0, sway * 0.26, 0.0);
+  vec4 centerClip = uViewProj * vec4(center, 1.0);
+  vec4 tangentClip = uViewProj * vec4(center + tangent, 1.0);
   vec2 centerNdc = centerClip.xy / centerClip.w;
   vec2 tangentPx = (tangentClip.xy / tangentClip.w - centerNdc) * uViewport;
   if (dot(tangentPx, tangentPx) < 0.0001) {
-    vec4 fallbackClip = uViewProj * vec4(aCenter + uCameraRight, 1.0);
+    vec4 fallbackClip = uViewProj * vec4(center + uCameraRight, 1.0);
     tangentPx = (fallbackClip.xy / fallbackClip.w - centerNdc) * uViewport;
   }
   vec2 normalPx = normalize(vec2(-tangentPx.y, tangentPx.x));
-  float dist = distance(aCenter, uCameraPos);
   float distantSoft = smoothstep(360.0, 1120.0, dist);
   float halfWidthPx = clamp(aSideWidth.y * 30.0, 1.18, 1.55) * mix(1.0, 1.72, distantSoft);
   vec2 offsetNdc = normalPx * aSideWidth.x * halfWidthPx * 2.0 / uViewport;
-  vWorldPos = aCenter;
+  vWorldPos = center;
   vRibbonSide = aSideWidth.x;
   gl_Position = centerClip;
   gl_Position.xy += offsetNdc * centerClip.w;
