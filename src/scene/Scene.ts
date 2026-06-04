@@ -197,8 +197,8 @@ export class Scene {
     const pitch = numberParam("pitch");
 
     if (isMobilePortraitViewport()) {
-      config.camera.position[0] = -61;
-      config.camera.position[2] = 93;
+      config.camera.position[0] = -70;
+      config.camera.position[2] = 74;
       config.camera.yaw = 3.52;
     }
 
