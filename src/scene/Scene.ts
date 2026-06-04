@@ -196,6 +196,12 @@ export class Scene {
     const yaw = numberParam("yaw");
     const pitch = numberParam("pitch");
 
+    if (isMobilePortraitViewport()) {
+      config.camera.position[0] = -61;
+      config.camera.position[2] = 93;
+      config.camera.yaw = 3.52;
+    }
+
     if (quality === "high") {
       config.world.terrainResolution = 288;
       config.grass.tileSize = 12;
@@ -289,4 +295,9 @@ export class Scene {
     if (this.debugMode === 5) return "no-post";
     return "final";
   }
+}
+
+function isMobilePortraitViewport(): boolean {
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  return window.innerHeight > window.innerWidth && (coarsePointer || window.innerWidth <= 640);
 }

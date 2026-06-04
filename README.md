@@ -1,6 +1,6 @@
 # A-JOURNEY
 
-Live demo: https://kangxyz.github.io/a-journey/
+Live demo: <https://kangxyz.github.io/a-journey/>
 
 A-JOURNEY is a lightweight Vite + TypeScript + WebGL2 first-person atmosphere scene. It renders a red sky, oppressive power towers and wires, distant mountains, slow dynamic clouds, wind-swept overgrown grassland, and background music with a distant broadcast feel. The project is self-contained and does not use a 3D engine.
 
@@ -76,6 +76,8 @@ Camera and shot tuning:
 ?dof=0.34
 ?camX=-74&camY=1.30&camZ=66&yaw=3.055&pitch=0.335
 ```
+
+Mobile portrait uses a separate default shot tuned around the foreground tower. URL camera parameters still override it.
 
 Examples:
 
