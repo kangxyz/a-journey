@@ -46,6 +46,7 @@ export interface SceneConfig {
     instancesPerTileNear: number;
     instancesPerTileMid: number;
     instancesPerTileFar: number;
+    densityScale: number;
     bladeCount: number;
     bladeSegments: number;
     fieldClumpScale: number;
@@ -99,9 +100,9 @@ export interface SceneConfig {
 export const defaultSceneConfig: SceneConfig = {
   seed: 20260602,
   camera: {
-    position: [-66, 1.30, 66],
-    yaw: 3.025,
-    pitch: 0.265,
+    position: [-74, 1.30, 66],
+    yaw: 3.055,
+    pitch: 0.335,
     fovDeg: 50,
     near: 0.05,
     far: 11200,
@@ -133,23 +134,24 @@ export const defaultSceneConfig: SceneConfig = {
     baseHeight: 0,
     heightAmplitude: 2.2,
     noiseScale: 0.012,
-    colorDark: [0.050, 0.132, 0.024],
-    colorLight: [0.315, 0.455, 0.092]
+    colorDark: [0.088, 0.150, 0.030],
+    colorLight: [0.235, 0.300, 0.070]
   },
   grass: {
-    tileSize: 16,
-    activeRadius: 48,
-    instancesPerTileNear: 64,
-    instancesPerTileMid: 10,
-    instancesPerTileFar: 1,
+    tileSize: 14,
+    activeRadius: 72,
+    instancesPerTileNear: 520,
+    instancesPerTileMid: 14,
+    instancesPerTileFar: 0,
+    densityScale: 1.50,
     bladeCount: 6,
     bladeSegments: 3,
-    fieldClumpScale: 1.08,
-    nearDistance: 24,
-    midDistance: 42,
-    farDistance: 68,
-    windStrength: 0.14,
-    alphaCutoff: 0.44
+    fieldClumpScale: 1.05,
+    nearDistance: 22,
+    midDistance: 38,
+    farDistance: 58,
+    windStrength: 0.78,
+    alphaCutoff: 0.16
   },
   poles: {
     count: 58,

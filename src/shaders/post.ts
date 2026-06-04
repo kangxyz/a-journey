@@ -113,9 +113,9 @@ void main() {
     col *= mix(1.0 - uVignette, 1.0, vig);
     float bottomCrush = 1.0 - smoothstep(0.02, 0.36, vUv.y);
     float lowerField = (1.0 - smoothstep(0.18, 0.46, vUv.y)) * smoothstep(0.004, 0.075, col.g);
-    col *= 1.0 - bottomCrush * 0.11;
-    col.g *= 1.0 - lowerField * 0.055;
-    col.r *= 1.0 - lowerField * 0.035;
+    col *= 1.0 - bottomCrush * 0.045;
+    col.g *= 1.0 - lowerField * 0.018;
+    col.r *= 1.0 - lowerField * 0.018;
     float redFrame = smoothstep(0.18, 0.72, col.r) * smoothstep(0.42, 0.86, col.r - col.g * 0.65);
     float skyFrame = redFrame * smoothstep(0.18, 0.42, vUv.y);
     float scanRow = floor(vUv.y * 230.0);

@@ -75,15 +75,20 @@ export class FieldClumpSystem {
   private makeInstances(config: SceneConfig): FieldClump[] {
     const rng = new RNG(config.seed + 3300);
     const instances: FieldClump[] = [];
-    const attemptCount = Math.round(940 * config.grass.fieldClumpScale);
+    const attemptCount = Math.round(1720 * config.grass.fieldClumpScale);
 
     for (let i = 0; i < attemptCount; i++) {
       const bandRoll = rng.next();
       const zDepth =
-        bandRoll < 0.30 ? rng.float(8, 125) :
-        bandRoll < 0.84 ? rng.float(48, 360) :
-        rng.float(270, 680);
-      const widthAtDepth = bandRoll < 0.30 ? 38 + zDepth * 2.00 : 48 + zDepth * 2.50;
+        bandRoll < 0.20 ? rng.float(8, 105) :
+        bandRoll < 0.68 ? rng.float(42, 165) :
+        bandRoll < 0.88 ? rng.float(120, 430) :
+        rng.float(240, 780);
+      const widthAtDepth =
+        bandRoll < 0.20 ? 36 + zDepth * 2.00 :
+        bandRoll < 0.68 ? 60 + zDepth * 2.45 :
+        bandRoll < 0.88 ? 72 + zDepth * 2.80 :
+        90 + zDepth * 3.10;
       const x = rng.float(-widthAtDepth, widthAtDepth);
       const z = -zDepth;
       const macro = fbm2(x * 0.018, z * 0.024, config.seed + 3301, 4);
@@ -93,27 +98,36 @@ export class FieldClumpSystem {
       const foreground = 1 - smoothstep(55, 190, zDepth);
       const horizonBand = smoothstep(260, 520, zDepth);
 
-      if (rng.next() > 0.16 + density * 0.46 + foreground * 0.22 + horizonBand * 0.06) {
+      if (rng.next() > 0.18 + density * 0.52 + foreground * 0.18 + horizonBand * 0.14) {
         continue;
       }
 
-      const foregroundScale = bandRoll < 0.30 ? 1.0 : 0.0;
-      const horizonScale = bandRoll >= 0.84 ? 1.0 : 0.0;
-      const midScale = 1.0 - Math.max(foregroundScale, horizonScale);
+      const foregroundScale = bandRoll < 0.20 ? 1.0 : 0.0;
+      const grassBeltScale = bandRoll >= 0.20 && bandRoll < 0.68 ? 1.0 : 0.0;
+      const midScale = bandRoll >= 0.68 && bandRoll < 0.88 ? 1.0 : 0.0;
+      const horizonScale = bandRoll >= 0.88 ? 1.0 : 0.0;
+      const baseY =
+        terrainHeight(x, z, config.seed, config.terrain.heightAmplitude) +
+        foregroundScale * -rng.float(0.04, 0.14) +
+        grassBeltScale * rng.float(0.04, 0.12) +
+        midScale * rng.float(0.03, 0.10) +
+        horizonScale * rng.float(0.06, 0.16);
       instances.push({
         x,
         z,
-        y: terrainHeight(x, z, config.seed, config.terrain.heightAmplitude) - rng.float(0.04, 0.16),
+        y: baseY,
         rotation: rng.float(0, Math.PI * 2),
         width:
-          rng.float(0.22, 0.88) * (0.78 + density * 0.78 + foreground * 0.68) * foregroundScale +
-          rng.float(0.30, 1.15) * (0.76 + density * 0.88) * midScale +
-          rng.float(0.48, 1.72) * (0.62 + density * 0.42) * horizonScale,
+          rng.float(0.55, 1.85) * (0.82 + density * 0.92 + foreground * 0.58) * foregroundScale +
+          rng.float(2.80, 7.80) * (0.96 + density * 0.96) * grassBeltScale +
+          rng.float(2.00, 5.60) * (0.88 + density * 0.92) * midScale +
+          rng.float(2.60, 7.20) * (0.76 + density * 0.62) * horizonScale,
         height:
-          rng.float(0.26, 0.94) * (0.72 + density * 0.80 + foreground * 0.72) * foregroundScale +
-          rng.float(0.10, 0.40) * (0.70 + density * 0.72) * midScale +
-          rng.float(0.06, 0.18) * (0.72 + density * 0.36) * horizonScale,
-        density: Math.min(1, density + foregroundScale * 0.16 + horizonScale * 0.04),
+          rng.float(0.22, 0.72) * (0.76 + density * 0.72 + foreground * 0.52) * foregroundScale +
+          rng.float(0.18, 0.56) * (0.86 + density * 0.64) * grassBeltScale +
+          rng.float(0.12, 0.42) * (0.82 + density * 0.68) * midScale +
+          rng.float(0.08, 0.26) * (0.84 + density * 0.48) * horizonScale,
+        density: Math.min(1, density + foregroundScale * 0.16 + grassBeltScale * 0.14 + midScale * 0.08 + horizonScale * 0.10),
         phase: rng.float(0, Math.PI * 2)
       });
     }

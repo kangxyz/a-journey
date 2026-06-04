@@ -4,7 +4,7 @@ import { fbm2, smoothstep } from "../math/Noise";
 import { RNG } from "../math/RNG";
 import type { Vec3 } from "../math/Vec3";
 import { vec3 } from "../math/Vec3";
-import { createArrayBuffer, createMeshGpu, disposeMeshGpu, updateArrayBuffer } from "../renderer/BufferUtils";
+import { createArrayBuffer, createMeshGpu, disposeMeshGpu } from "../renderer/BufferUtils";
 import type { MeshGpu } from "../renderer/BufferUtils";
 import { ShaderProgram } from "../renderer/ShaderProgram";
 import { grassFragmentShader, grassVertexShader } from "../shaders/grass";
@@ -21,6 +21,7 @@ interface GrassInstance {
   jitter: number;
   phase: number;
   variant: number;
+  lodRank: number;
 }
 
 interface GrassTile {
@@ -35,6 +36,8 @@ export class GrassSystem {
   private readonly mesh: MeshGpu;
   private readonly instanceBuffer: WebGLBuffer;
   private readonly tiles = new Map<string, GrassTile>();
+  private instanceData: Float32Array;
+  private instanceCapacity = 16384;
   private instanceCount = 0;
   private activeTileCount = 0;
   private lastRebuildPos: Vec3 = [Number.POSITIVE_INFINITY, 0, Number.POSITIVE_INFINITY];
@@ -43,16 +46,17 @@ export class GrassSystem {
   constructor(private readonly gl: WebGL2RenderingContext, private readonly config: SceneConfig) {
     this.program = new ShaderProgram(gl, grassVertexShader, grassFragmentShader);
     this.mesh = createMeshGpu(gl, makeGrassTuftMesh(config.grass.bladeSegments, config.grass.bladeCount));
-    this.instanceBuffer = createArrayBuffer(gl, new Float32Array(10), gl.DYNAMIC_DRAW);
+    this.instanceData = new Float32Array(this.instanceCapacity * 10);
+    this.instanceBuffer = createArrayBuffer(gl, this.instanceData, gl.DYNAMIC_DRAW);
     this.attachInstanceAttributes();
   }
 
-  update(_dt: number, cameraPos: Vec3, cameraForward: Vec3): void {
+  update(_dt: number, cameraPos: Vec3, _cameraForward: Vec3): void {
     const tileSize = this.config.grass.tileSize;
     const centerIx = Math.floor(cameraPos[0] / tileSize);
     const centerIz = Math.floor(cameraPos[2] / tileSize);
     const centerKey = `${centerIx},${centerIz}`;
-    const moved = vec3.length(vec3.sub(cameraPos, this.lastRebuildPos)) > 4.0;
+    const moved = vec3.length(vec3.sub(cameraPos, this.lastRebuildPos)) > 5.5;
 
     if (centerKey === this.lastCenterKey && !moved) {
       return;
@@ -61,6 +65,7 @@ export class GrassSystem {
     this.lastCenterKey = centerKey;
     this.lastRebuildPos = [...cameraPos];
     const radiusTiles = Math.ceil(this.config.grass.activeRadius / tileSize);
+    const visibleRadius = Math.min(this.config.grass.activeRadius, this.config.grass.farDistance + tileSize);
     const needed = new Set<string>();
     const active: GrassTile[] = [];
 
@@ -74,12 +79,7 @@ export class GrassSystem {
         const toTile: Vec3 = [cx - cameraPos[0], 0, cz - cameraPos[2]];
         const dist = vec3.length(toTile);
 
-        if (dist > this.config.grass.activeRadius) {
-          continue;
-        }
-
-        const forwardDot = dist > 0.001 ? vec3.dot(vec3.normalize(toTile), vec3.normalize([cameraForward[0], 0, cameraForward[2]])) : 1;
-        if (dist > 28 && forwardDot < -0.32) {
+        if (dist > visibleRadius) {
           continue;
         }
 
@@ -141,45 +141,81 @@ export class GrassSystem {
   }
 
   private rebuildInstanceBuffer(active: GrassTile[], cameraPos: Vec3): void {
-    const packed: number[] = [];
-    this.activeTileCount = active.length;
+    let uploadedTileCount = 0;
+    let cursor = 0;
 
     for (const tile of active) {
-      const dist = Math.hypot(tile.center[0] - cameraPos[0], tile.center[2] - cameraPos[2]);
-      let count = tile.instances.length;
-      let lodFade = 1;
+      let tileUploaded = false;
 
-      if (dist > this.config.grass.midDistance) {
-        count = Math.min(count, this.config.grass.instancesPerTileFar);
-        lodFade = 1 - smoothstep(this.config.grass.midDistance, this.config.grass.farDistance, dist) * 0.55;
-      } else if (dist > this.config.grass.nearDistance) {
-        count = Math.min(count, this.config.grass.instancesPerTileMid);
-        lodFade = 0.82;
-      }
-
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < tile.instances.length; i++) {
         const instance = tile.instances[i];
         if (!instance) continue;
-        if (Math.hypot(instance.x - cameraPos[0], instance.z - cameraPos[2]) < 2.6) {
+        const instanceDist = Math.hypot(instance.x - cameraPos[0], instance.z - cameraPos[2]);
+        if (instanceDist > this.config.grass.farDistance) {
           continue;
         }
-        packed.push(
-          instance.x,
-          instance.z,
-          instance.y,
-          instance.rotation,
-          instance.height,
-          instance.width,
-          instance.jitter,
-          instance.phase,
-          lodFade,
-          instance.variant
-        );
+        const distanceDensity =
+          instanceDist <= this.config.grass.nearDistance
+            ? 1
+            : instanceDist <= this.config.grass.midDistance
+              ? 1 - smoothstep(this.config.grass.nearDistance, this.config.grass.midDistance, instanceDist) * 0.94
+              : 0.055 * (1 - smoothstep(this.config.grass.midDistance, this.config.grass.farDistance, instanceDist) * 0.68);
+        if (instance.lodRank > distanceDensity) {
+          continue;
+        }
+        let lodFade = 1;
+        if (instanceDist > this.config.grass.midDistance) {
+          lodFade = 1 - smoothstep(this.config.grass.midDistance, this.config.grass.farDistance, instanceDist);
+        } else if (instanceDist > this.config.grass.nearDistance) {
+          lodFade = 1 - smoothstep(this.config.grass.nearDistance, this.config.grass.midDistance, instanceDist) * 0.18;
+        }
+        if (lodFade <= 0.015) {
+          continue;
+        }
+        if (cursor + 10 > this.instanceData.length) {
+          this.growInstanceBuffer(Math.ceil((cursor + 10) / 10));
+        }
+        this.instanceData[cursor++] = instance.x;
+        this.instanceData[cursor++] = instance.z;
+        this.instanceData[cursor++] = instance.y;
+        this.instanceData[cursor++] = instance.rotation;
+        this.instanceData[cursor++] = instance.height;
+        this.instanceData[cursor++] = instance.width;
+        this.instanceData[cursor++] = instance.jitter;
+        this.instanceData[cursor++] = instance.phase;
+        this.instanceData[cursor++] = lodFade;
+        this.instanceData[cursor++] = instance.variant;
+        tileUploaded = true;
+      }
+
+      if (tileUploaded) {
+        uploadedTileCount++;
       }
     }
 
-    this.instanceCount = packed.length / 10;
-    updateArrayBuffer(this.gl, this.instanceBuffer, new Float32Array(packed), this.gl.DYNAMIC_DRAW);
+    this.activeTileCount = uploadedTileCount;
+    this.instanceCount = cursor / 10;
+    this.uploadInstanceData(cursor);
+  }
+
+  private growInstanceBuffer(requiredInstances: number): void {
+    const previousData = this.instanceData;
+    while (this.instanceCapacity < requiredInstances) {
+      this.instanceCapacity *= 2;
+    }
+    this.instanceData = new Float32Array(this.instanceCapacity * 10);
+    this.instanceData.set(previousData.subarray(0, Math.min(previousData.length, this.instanceData.length)));
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.instanceData.byteLength, gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  }
+
+  private uploadInstanceData(floatCount: number): void {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instanceData.subarray(0, floatCount));
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
   private createTile(ix: number, iz: number): GrassTile {
@@ -187,28 +223,40 @@ export class GrassSystem {
     const seed = (this.config.seed ^ (ix * 73856093) ^ (iz * 19349663)) >>> 0;
     const rng = new RNG(seed);
     const instances: GrassInstance[] = [];
-    const maxCount = this.config.grass.instancesPerTileNear;
+    const maxCount = Math.round(this.config.grass.instancesPerTileNear * this.config.grass.densityScale);
     const startX = ix * tileSize;
     const startZ = iz * tileSize;
 
     for (let i = 0; i < maxCount; i++) {
       const x = startX + rng.next() * tileSize;
       const z = startZ + rng.next() * tileSize;
-      const patches = fbm2(x * 0.028, z * 0.028, this.config.seed + 20, 4);
-      const fine = fbm2(x * 0.12, z * 0.12, this.config.seed + 21, 3);
-      const rows = 0.5 + 0.5 * Math.sin(x * 0.18 + z * 0.085 + patches * 4.2);
-      const clump = smoothstep(0.56, 0.86, patches * 0.72 + fine * 0.20 + rows * 0.14);
-      const wetEdge = 1 - smoothstep(38, 150, Math.max(0, -z));
-      const densityField = smoothstep(0.10, 0.70, patches * 0.58 + fine * 0.28 + rows * 0.22);
-      const density = Math.min(1, 0.18 + densityField * 0.78 + wetEdge * 0.10);
+      const patches = fbm2(x * 0.026, z * 0.030, this.config.seed + 20, 4);
+      const fine = fbm2(x * 0.115, z * 0.135, this.config.seed + 21, 3);
+      const broad = fbm2(x * 0.010, z * 0.014, this.config.seed + 22, 3);
+      const rows = 0.5 + 0.5 * Math.sin(x * 0.16 + z * 0.090 + patches * 4.6);
+      const clump = smoothstep(0.42, 0.78, patches * 0.56 + fine * 0.18 + broad * 0.20 + rows * 0.18);
+      const patchOpen = smoothstep(0.20, 0.78, broad * 0.44 + patches * 0.34 + rows * 0.16 + fine * 0.06);
+      const dampBand = 1 - smoothstep(42, 180, Math.max(0, -z));
+      const dryPatch = smoothstep(0.70, 0.94, fine * 0.76 + broad * 0.24);
+      const densityField = smoothstep(0.08, 0.68, broad * 0.38 + patches * 0.34 + fine * 0.16 + rows * 0.20);
+      const density = Math.min(
+        1,
+        (0.20 + densityField * 0.48 + clump * 0.36 + patchOpen * 0.30 + dampBand * 0.05 - dryPatch * 0.08) *
+          (0.72 + this.config.grass.densityScale * 0.28)
+      );
 
       if (rng.next() > density) {
         continue;
       }
 
       const variant = rng.next();
-      const height = rng.float(0.060, 0.245) * (0.78 + rows * 0.18 + clump * 0.40 + wetEdge * 0.34);
-      const width = rng.float(0.008, 0.024) * (0.84 + clump * 0.30 + wetEdge * 0.12);
+      const lodRank = rng.next();
+      const canopyWave = Math.sin(z * 0.044 + x * 0.010 + broad * 4.8) * 0.5 + 0.5;
+      const weedTall = smoothstep(0.58, 0.96, variant + clump * 0.20 + broad * 0.12);
+      const heightField = Math.max(0.62, 0.76 + broad * 0.16 + canopyWave * 0.18 + clump * 0.24 + patchOpen * 0.10 - dryPatch * 0.02);
+      const rawHeight = rng.float(0.62, 1.16) * heightField * (1 + weedTall * rng.float(0.06, 0.18));
+      const height = Math.min(rawHeight, 1.32 + weedTall * 0.14 + clump * 0.08);
+      const width = rng.float(0.062, 0.164) * (0.96 + clump * 0.30 + patchOpen * 0.10) * (1 - weedTall * 0.05);
 
       instances.push({
         x,
@@ -217,9 +265,10 @@ export class GrassSystem {
         rotation: rng.float(0, Math.PI * 2),
         height,
         width,
-        jitter: rng.float(-1, 1),
+        jitter: density * 2 - 1,
         phase: rng.float(0, Math.PI * 2),
-        variant
+        variant,
+        lodRank
       });
     }
 

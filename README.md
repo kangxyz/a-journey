@@ -2,13 +2,14 @@
 
 Live demo: https://kangxyz.github.io/a-journey/
 
-A-JOURNEY is a lightweight Vite + TypeScript + WebGL2 first-person atmosphere scene. It renders a red sky, oppressive power towers and wires, distant mountains, slow dynamic clouds, damp green grassland, and background music with a distant broadcast feel. The project is self-contained and does not use a 3D engine.
+A-JOURNEY is a lightweight Vite + TypeScript + WebGL2 first-person atmosphere scene. It renders a red sky, oppressive power towers and wires, distant mountains, slow dynamic clouds, wind-swept overgrown grassland, and background music with a distant broadcast feel. The project is self-contained and does not use a 3D engine.
 
 ## Highlights
 
 - WebGL2 rendering without an external engine.
 - First-person walking camera with terrain-following movement.
-- Procedural terrain, grass, towers, wires, mountains, clouds, and horizon detail.
+- Procedural terrain, instanced grass, towers, wires, mountains, clouds, and horizon detail.
+- Dense near-field grass with distance-based LOD and shader-based far grassland continuity.
 - Color post-processing, vignette, film grain, and depth-of-field.
 - Touch controls, mobile fullscreen helpers, and touch-unlocked audio.
 - URL-controlled quality profiles and shot-tuning parameters.
@@ -22,10 +23,16 @@ npm install
 npm run dev
 ```
 
-The Vite dev server serves the app under the configured base path:
+The Vite dev server serves the app under the configured base path. Use the port printed by Vite:
 
 ```text
-http://127.0.0.1:5181/a-journey/
+http://127.0.0.1:<port>/a-journey/
+```
+
+For repeatable verifier commands, start Vite on a fixed local port:
+
+```bash
+npm run dev -- --host 127.0.0.1 --port 5181
 ```
 
 Build and preview the production bundle:
@@ -67,7 +74,7 @@ Camera and shot tuning:
 ```text
 ?fov=48
 ?dof=0.34
-?camX=-66&camY=1.30&camZ=66&yaw=3.025&pitch=0.265
+?camX=-74&camY=1.30&camZ=66&yaw=3.055&pitch=0.335
 ```
 
 Examples:
@@ -75,12 +82,18 @@ Examples:
 ```text
 http://127.0.0.1:5181/a-journey/?quality=low
 http://127.0.0.1:5181/a-journey/?quality=high&fps=60
-http://127.0.0.1:5181/a-journey/?fov=44&dof=0.45&pitch=0.22
+http://127.0.0.1:5181/a-journey/?fov=50&dof=0.45&camX=-74&yaw=3.055&pitch=0.335
 ```
+
+## Rendering Profiles
+
+`quality=balanced` is the default. It targets a quiet profile around 30fps, DPR capped at 1, and an internal pixel budget around 900k. The current default shot keeps dense near grass while using stable distance LOD and terrain/grassland shader detail to avoid expensive far-field blades.
+
+`quality=low` reduces render scale, terrain detail, grass density, tower count, and wire samples. `quality=high` restores higher render scale, denser grass, more wire samples, and higher scene density for screenshots or stronger machines.
 
 ## Verification
 
-The Playwright verifier captures screenshots, checks for page errors, confirms that the scene is not black, verifies camera movement, and reads debug stats. Start the dev server before running these commands.
+The Playwright verifier captures screenshots, checks for page errors, confirms that the scene is not black, verifies camera movement, and reads debug stats. Start the dev server before running these commands, and replace the port in `TARGET_URL` if Vite is not running on `5181`.
 
 Run the default desktop check:
 
@@ -128,4 +141,5 @@ AGENTS.md                General development rules for coding agents
 - Coding agents should read `AGENTS.md` before changing the project.
 - `src/assets/audio/background.mp3` is the runtime background track.
 - `target/` is reserved for local reference images and is not required at runtime.
-- `node_modules/`, `dist/`, `artifacts/`, and `target/` are ignored by Git.
+- `demo/` is reserved for local technical demos used as reference during migration work.
+- `node_modules/`, `dist/`, `artifacts/`, `target/`, and `demo/` are ignored by Git.

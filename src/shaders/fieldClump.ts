@@ -21,9 +21,10 @@ void main() {
   float s = sin(aInstanceA.w);
   float c = cos(aInstanceA.w);
   vec3 local = vec3(aPosition.x * aInstanceB.x, aPosition.y * aInstanceB.y, aPosition.z * aInstanceB.x);
-  float sway = sin(uTime * 0.62 + aInstanceB.w + aPosition.y * 2.6) * 0.035 * aPosition.y * aPosition.y;
-  local.x += sway;
+  float sway = sin(uTime * 0.44 + aInstanceB.w + aPosition.y * 2.2) * 0.028 * aPosition.y * aPosition.y;
   vec2 rotated = vec2(local.x * c - local.z * s, local.x * s + local.z * c);
+  vec2 windDir = normalize(vec2(-1.0, 0.10));
+  rotated += windDir * sway * aInstanceB.y;
   vWorldPos = vec3(aInstanceA.x + rotated.x, aInstanceA.z + local.y, aInstanceA.y + rotated.y);
   vUv = aUv;
   vLocalPos = aPosition;
@@ -66,24 +67,24 @@ void main() {
   float alpha = edge * top * mix(0.60, 1.0, vDensity) * (0.66 + verticalCuts * 0.34);
   alpha *= smoothstep(0.18, 0.72, ragged + (1.0 - vUv.y) * 0.42);
   alpha *= 0.76 + reedLines * 0.24 + foreground * 0.12;
-  alpha *= mix(1.0, 0.58, horizonBand);
+  alpha *= mix(1.0, 0.92, horizonBand);
   if (alpha < 0.22) {
     discard;
   }
 
   float rootShade = smoothstep(1.0, 0.0, vUv.y);
   float bladePepper = smoothstep(0.55, 0.92, ragged * 0.72 + verticalCuts * 0.26);
-  vec3 col = mix(vec3(0.056, 0.118, 0.014), vec3(0.018, 0.050, 0.006), rootShade * 0.58);
-  col = mix(col, vec3(0.010, 0.034, 0.004), verticalCuts * vDensity * (0.10 + foreground * 0.08));
-  col = mix(col, vec3(0.012, 0.038, 0.004), horizonBand * (0.18 + bladePepper * 0.08));
-  col += vec3(0.040, 0.064, 0.006) * ragged * 0.070;
-  col += vec3(0.028, 0.052, 0.004) * reedLines * foreground * 0.090;
-  col = mix(col, vec3(0.130, 0.098, 0.018), bladePepper * smoothstep(0.44, 1.0, vUv.y) * 0.10);
+  vec3 col = mix(vec3(0.100, 0.190, 0.038), vec3(0.070, 0.130, 0.026), rootShade * 0.52);
+  col = mix(col, vec3(0.064, 0.124, 0.022), verticalCuts * vDensity * (0.06 + foreground * 0.04));
+  col = mix(col, vec3(0.072, 0.138, 0.026), horizonBand * (0.12 + bladePepper * 0.05));
+  col += vec3(0.052, 0.092, 0.010) * ragged * 0.070;
+  col += vec3(0.035, 0.054, 0.006) * reedLines * foreground * 0.050;
+  col = mix(col, vec3(0.185, 0.164, 0.046), bladePepper * smoothstep(0.48, 1.0, vUv.y) * 0.135);
   float fog = redFogAmount(vWorldPos, uCameraPos, uFogDensity, uFogStart, uFogHeightMin, uFogHeightMax, uFogHeightStrength);
-  vec3 clumpFog = mix(uFogColor, vec3(0.024, 0.052, 0.006), smoothstep(80.0, 360.0, depth) * 0.76);
-  col = mix(col, clumpFog, fog * 0.36);
+  vec3 clumpFog = mix(uFogColor, vec3(0.068, 0.128, 0.022), smoothstep(80.0, 460.0, depth) * 0.92);
+  col = mix(col, clumpFog, fog * 0.18);
   if (uDebugMode == 3) {
     col = vec3(0.0, vDensity * 0.18, 0.0);
   }
-  fragColor = vec4(col, alpha * (0.42 + vDensity * 0.24) * mix(1.0, 0.68, horizonBand));
+  fragColor = vec4(col, alpha * (0.48 + vDensity * 0.32) * mix(1.0, 0.94, horizonBand));
 }`;

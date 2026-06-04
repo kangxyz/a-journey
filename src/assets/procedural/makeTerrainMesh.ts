@@ -4,9 +4,11 @@ import { vec3 } from "../../math/Vec3";
 import type { MeshData } from "../MeshData";
 
 export function terrainHeight(x: number, z: number, seed: number, amplitude = 2.2): number {
-  const broad = (fbm2(x * 0.006, z * 0.006, seed, 5) - 0.5) * amplitude;
-  const small = (fbm2(x * 0.035, z * 0.035, seed + 11, 4) - 0.5) * 0.7;
-  return broad + small;
+  const broad = (fbm2(x * 0.0052, z * 0.0058, seed, 5) - 0.5) * amplitude * 1.18;
+  const rolling = (fbm2(x * 0.014, z * 0.011, seed + 7, 4) - 0.5) * amplitude * 0.34;
+  const small = (fbm2(x * 0.035, z * 0.035, seed + 11, 4) - 0.5) * 0.62;
+  const windRows = Math.sin(z * 0.035 + x * 0.008 + fbm2(x * 0.010, z * 0.010, seed + 19, 3) * 3.2) * 0.18;
+  return broad + rolling + small + windRows;
 }
 
 export function makeTerrainMesh(size: number, resolution: number, seed: number, amplitude: number): MeshData {

@@ -47,20 +47,20 @@ void main() {
   float lowBand = smoothstep(-18.0, 5.0, vWorldPos.y) * smoothstep(118.0, 48.0, vWorldPos.y);
   float verticalFeather = smoothstep(0.30, 0.92, vUv.y);
   float broken = smoothstep(0.46, 0.92, veilNoise * 0.68 + grain * 0.32);
-  vec3 col = mix(vec3(0.010, 0.0, 0.0), vec3(0.040, 0.0, 0.0), fog * 0.20 + horizonDistance * 0.12 + broken * 0.10);
-  float alpha = (0.030 + broken * 0.105 + fog * 0.025) * horizonDistance * lowBand * verticalFeather;
+  vec3 col = mix(vec3(0.008, 0.001, 0.0), vec3(0.030, 0.002, 0.0), fog * 0.18 + horizonDistance * 0.10 + broken * 0.08);
+  float alpha = (0.024 + broken * 0.082 + fog * 0.018) * horizonDistance * lowBand * verticalFeather;
   alpha *= smoothstep(0.012, 0.045, alpha);
   float seamCover = smoothstep(0.30, 0.02, vUv.y) * horizonDistance * smoothstep(-34.0, -3.0, vWorldPos.y) * smoothstep(18.0, 6.0, vWorldPos.y);
   col = mix(col, vec3(0.0, 0.001, 0.0), seamCover);
-  alpha = max(alpha, seamCover * 0.32);
+  alpha = max(alpha, seamCover * 0.08);
   float ridgeShape = smoothstep(0.06, 0.24, vUv.y) * smoothstep(1.10, 0.82, vUv.y);
   float ridgeBreakup = 0.78 + smoothstep(0.32, 0.78, veilNoise * 0.58 + grain * 0.16) * 0.22;
   float ridgeSilhouette = ridgeShape * horizonDistance * lowBand * ridgeBreakup;
-  col = mix(col, vec3(0.0), ridgeSilhouette * 0.78);
-  alpha = max(alpha, ridgeSilhouette * 0.68);
+  col = mix(col, vec3(0.0), ridgeSilhouette * 0.42);
+  alpha = max(alpha, ridgeSilhouette * 0.30);
   float redDust = horizonDistance * lowBand * smoothstep(0.26, 0.82, atmosphericVeil * 0.72 + atmosphericGrain * 0.28);
   col = mix(col, vec3(0.050, 0.001, 0.0), redDust * 0.34);
-  alpha = max(alpha, redDust * 0.18);
+  alpha = max(alpha, redDust * 0.12);
   if (uDebugMode == 1) {
     col = vec3(fog, fog * 0.1, 0.0);
     alpha = 0.55;
