@@ -1,108 +1,104 @@
 # AGENTS.md
 
-This file is the stable operating contract for coding agents working on A-JOURNEY. Keep it high-signal and durable. Put detailed procedures in `docs/AGENT_WORKFLOW.md` and project design details in `docs/ARCHITECTURE.md`.
+Guidance for AI agents and human contributors working on A-JOURNEY.
 
-## Read order for every task
+## Project goal
 
-1. `AGENTS.md` for stable rules.
-2. `README.md` for public commands, controls, deployment, and project overview.
-3. `docs/ARCHITECTURE.md` for runtime flow, module boundaries, render order, and target structure.
-4. `docs/DEVELOPMENT.md` for verification commands and change playbooks.
-5. `docs/AGENT_WORKFLOW.md` for long-running task and handoff protocol.
-6. `docs/TASK_LOG.md` for current cross-session state.
-7. Relevant source files before editing.
+A-JOURNEY is a small Vite + TypeScript + WebGL2 first-person atmosphere scene. Keep it easy to run, easy to understand, and easy to modify. Preserve the current mood and behavior unless a task explicitly asks for a change.
 
-## Project intent
-
-A-JOURNEY is a lightweight Vite + TypeScript + WebGL2 first-person atmosphere scene. It is intentionally self-contained and does not use a 3D engine.
-
-Preserve the core direction:
+Core direction:
 
 - Red sky and heavy atmosphere.
-- Oppressive power towers and wires.
-- Soft distant mountains and horizon detail.
-- Slow dynamic clouds.
-- Damp green overgrown grassland.
-- Background music with a distant broadcast feel.
+- Power towers and wires with strong silhouettes.
+- Distant mountains, dynamic clouds, terrain, and overgrown grass.
 - First-person movement that follows terrain.
-- Mobile touch controls, fullscreen affordances, and touch-unlocked audio.
+- Mobile touch controls, fullscreen helpers, and touch-unlocked audio.
+- No 3D engine or large gameplay framework.
 
-Default quality should remain performance-conscious and calm. Use heavier density or effects only when the task explicitly asks for it or when a profile-specific change keeps `quality=low` usable.
+## Commands
 
-## Stable module boundaries
+Install dependencies:
 
-- `src/app/`: browser shell, canvas sizing, frame pacing, runtime quality policy, fullscreen/mobile browser helpers.
-- `src/audio/`: background audio element, unlock flow, Web Audio graph, volume/fade policy.
-- `src/assets/`: runtime assets and procedural mesh/data generation.
-- `src/math/`: dependency-free math, matrix, vector, RNG, and noise helpers.
-- `src/renderer/`: reusable WebGL2 resource helpers. Keep it scene-agnostic.
-- `src/scene/`: scene config, camera, input, debug overlay, render-system orchestration, and current render systems.
-- `src/shaders/`: GLSL shader strings grouped by owning render system.
-- `scripts/`: verifier scripts only.
-- `docs/`: durable architecture, development, workflow, and task-handoff documentation.
+```bash
+npm install
+```
 
-When the scene grows, follow the target structure in `docs/ARCHITECTURE.md` instead of inventing a new layout in a single task.
+Run locally:
 
-## Coding rules
+```bash
+npm run dev
+```
 
-- Prefer small, targeted edits that preserve the existing systems and visual direction.
-- Do not introduce a rendering engine or large runtime dependency unless explicitly requested.
-- Keep TypeScript strictness intact. Avoid `any` unless wrapping unavoidable browser API gaps.
-- Add or update typed config fields in `SceneConfig` instead of scattering magic constants.
-- Prefer deterministic procedural generation based on `SceneConfig.seed`.
-- Keep WebGL ownership clear: the class that allocates a GL resource must dispose it.
-- Set GL state intentionally in each render system; do not assume a previous system left the state you need.
-- Avoid broad file moves mixed with behavior changes.
-- Do not add UI unless requested, except for debug or mobile affordances that are part of the task.
+Use a fixed port for verifier commands:
 
-## Visual rules
+```bash
+npm run dev -- --host 127.0.0.1 --port 5181
+```
 
-- Preserve the established mood before increasing realism or brightness.
-- Clouds must remain dynamic but slow.
-- Mountains and horizon detail should fade softly; avoid hard side cuts.
-- Grass should read as a damp green field, not flat neon green and not solid black.
-- Towers and wires should keep strong silhouettes and depth layering.
-- Post-processing should support the mood without hiding scene readability.
-- Background music should remain at a normal, non-startling volume.
+Build:
 
-## Runtime compatibility rules
+```bash
+npm run build
+```
 
-- Keep documented URL controls stable: `quality`, `fps`, `scale`, `fov`, `dof`, `camX`, `camY`, `camZ`, `yaw`, and `pitch`.
-- Treat mobile as a first-class target. Do not break touch movement, touch-look, fullscreen behavior, browser-chrome helpers, safe-area layout, or touch-unlocked audio.
-- Preserve the `/a-journey/` Vite base path unless deployment requirements change.
-- Do not commit generated/local files such as `node_modules/`, `dist/`, `artifacts/`, `demo/`, or `target/`.
+Smoke verify after starting the dev server on port `5181`:
 
-## Verification rules
+```bash
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify
+```
 
-- Run `npm run build` after TypeScript, shader, config-shape, import, or runtime changes.
-- Run the desktop verifier for rendering, camera, shader, post-process, terrain, vegetation, tower, wire, or performance changes.
-- Run mobile verifiers for input, layout, fullscreen, audio, quality, CSS, manifest, or mobile performance changes.
-- Inspect verifier screenshots for visual changes.
-- If verification cannot run, state exactly what was not run and why in the handoff.
-- Docs-only changes do not require a runtime build unless they change executable examples or commands.
+Mobile verifier commands:
 
-## Long-running task rules
+```bash
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile:landscape
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile:no-fullscreen
+```
 
-- Use `docs/TASK_LOG.md` for work that spans multiple commits, many files, uncertain design choices, or multiple sessions.
-- Record scope, changed files, validation, decisions, risks, and next steps.
-- Keep task-log entries concise and useful for a new agent with no chat history.
-- Prefer durable documentation updates over chat-only explanations for architecture decisions.
-- Keep `AGENTS.md` stable. Move detailed process changes to `docs/AGENT_WORKFLOW.md`.
+There is no lint command yet. `npm run build` is the minimum static check for code changes.
 
-## Git rules
+## Read before editing
 
-- Commit or push only when the current task explicitly requests repository modification.
-- Keep commits focused by topic.
-- Do not revert user changes unless explicitly asked.
-- Do not deploy manually unless explicitly asked.
-- Remember that pushing to `main` can trigger the GitHub Pages workflow.
+For every task, start with:
 
-## Handoff checklist
+1. `README.md` for project status, commands, controls, and main files.
+2. `TODO.md` for known issues and next small tasks.
+3. `package.json` for available scripts.
+4. `src/main.ts` and `src/app/App.ts` for startup, canvas sizing, render loop, audio, and fullscreen setup.
+5. `src/scene/Scene.ts` for render order, frame flow, URL overrides, regeneration, and stats.
+6. `src/scene/SceneConfig.ts` before changing visual tuning or quality-related constants.
+7. `src/scene/Input.ts`, `src/app/MobileFullscreenButton.ts`, and `src/style.css` before changing input or mobile behavior.
+8. The relevant render class and shader file before changing a visual feature.
 
-Before finishing a task, report:
+## Code style and boundaries
 
-- What changed.
-- Commit SHA or PR reference when repository changes were made.
-- Validation that was run.
-- Validation that was not run, with the exact reason.
-- Any follow-up risks or recommended next steps.
+- Keep the project flat and small.
+- Prefer targeted edits over broad rewrites.
+- Avoid adding `engine/`, `core/`, entity-component systems, plugin systems, or other framework-style layers while the project remains this small.
+- Avoid adding a 3D engine or large dependency unless explicitly requested.
+- Keep TypeScript strictness intact.
+- Prefer typed fields in `SceneConfig` over scattered magic constants.
+- Keep WebGL ownership simple: the class that allocates a GL resource should dispose it.
+- Keep URL parameters documented and backward compatible when possible.
+- Treat mobile behavior as first-class; verify touch, fullscreen, layout, and audio paths when they are affected.
+
+## Project guardrails
+
+- Architecture cleanup should stay behavior-preserving.
+- Keep current controls, URL parameters, audio behavior, mobile helpers, and verifier scripts unless a task explicitly changes them.
+- Keep generated and local-only files out of commits: `node_modules/`, `dist/`, `artifacts/`, `target/`, `demo/`, logs, `.env`, and secrets.
+- Check screenshots when visual behavior changes and a verifier/browser is available.
+- Keep onboarding in `README.md`, `AGENTS.md`, and `TODO.md` unless the project grows enough to need more.
+
+## Task handoff
+
+At the end of every task, report:
+
+- Short judgment of the current state.
+- Files changed.
+- Commands run and results.
+- Commands not run, with the reason.
+- Commit SHA or PR reference.
+- Small follow-up suggestions.
+
+Update `TODO.md` when you discover a durable next step, known issue, or small task for a future agent.
