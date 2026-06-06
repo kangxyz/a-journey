@@ -2,32 +2,25 @@
 
 Live demo: <https://kangxyz.github.io/a-journey/>
 
-A-JOURNEY is a lightweight Vite + TypeScript + WebGL2 first-person atmosphere scene. It renders a red sky, oppressive power towers and wires, distant mountains, slow dynamic clouds, wind-swept overgrown grassland, and background music with a distant broadcast feel. The project is self-contained and does not use a 3D engine.
+A-JOURNEY is a small Vite + TypeScript + WebGL2 first-person atmosphere scene. It renders a red sky, distant mountains, power towers and wires, dynamic clouds, overgrown grassland, post-processing, mobile touch controls, and background music with a distant broadcast feel.
 
-## Highlights
+The project is intentionally self-contained and does not use a 3D engine.
 
-- WebGL2 rendering without an external engine.
-- First-person walking camera with terrain-following movement.
-- Procedural terrain, instanced grass, towers, wires, mountains, clouds, and horizon detail.
-- Dense near-field grass with distance-based LOD and shader-based far grassland continuity.
-- Color post-processing, vignette, film grain, and depth-of-field.
-- Touch controls, mobile fullscreen helpers, and touch-unlocked audio.
-- URL-controlled quality profiles and shot-tuning parameters.
+## Current status
 
-## Documentation Map
+This is an early-stage single-scene game prototype. The current focus is to keep the project easy to run, easy to inspect, and easy to extend without adding a large framework. Preserve existing behavior first; add gameplay features in small steps.
 
-- `AGENTS.md` is the stable operating contract for coding agents.
-- `docs/ARCHITECTURE.md` explains runtime flow, module boundaries, render order, target structure, and game-scene extension seams.
-- `docs/DEVELOPMENT.md` covers local commands, URL/debug controls, verification, change playbooks, deployment notes, and git hygiene.
-- `docs/AGENT_WORKFLOW.md` defines startup, long-running task, handoff, and multi-agent coordination protocols.
-- `docs/TASK_LOG.md` is the durable cross-session handoff log for long tasks and future agents.
-
-## Quick Start
+## Install
 
 Requirements: a recent Node.js runtime and npm.
 
 ```bash
 npm install
+```
+
+## Run locally
+
+```bash
 npm run dev
 ```
 
@@ -43,12 +36,43 @@ For repeatable verifier commands, start Vite on a fixed local port:
 npm run dev -- --host 127.0.0.1 --port 5181
 ```
 
-Build and preview the production bundle:
+## Build
 
 ```bash
 npm run build
+```
+
+This runs TypeScript checking through `tsc` and then builds the Vite production bundle.
+
+Preview the production build:
+
+```bash
 npm run preview
 ```
+
+## Verify
+
+The repository includes a Playwright-based smoke verifier that captures screenshots, checks for page errors, confirms the scene is not black, verifies camera movement, and reads debug stats.
+
+Start the dev server on port `5181`, then run:
+
+```bash
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify
+```
+
+Run mobile checks when changing input, layout, fullscreen behavior, audio, quality, CSS, or mobile performance:
+
+```bash
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile:landscape
+TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile:no-fullscreen
+```
+
+Verifier screenshots are written to `artifacts/`, which is ignored by Git.
+
+Note: `scripts/verify-scene.mjs` currently launches Chrome from a macOS Google Chrome path. On other environments, `npm run build` is the minimum static check until the verifier browser path is made configurable.
+
+There is no separate lint command yet.
 
 ## Controls
 
@@ -57,10 +81,12 @@ npm run preview
 - `W` / `A` / `S` / `D` moves the camera.
 - `Shift` sprints.
 - `F` toggles debug stats.
+- `1` through `5` switch debug render modes.
+- `R` regenerates the procedural scene seed.
 - On touch devices, use the lower-left joystick to move and drag on the right side to look.
 - On touch devices, use the fullscreen button when supported, or swipe up from the bottom-center chevrons to help the browser collapse its chrome.
 
-## URL Parameters
+## URL parameters
 
 Quality:
 
@@ -87,71 +113,39 @@ Camera and shot tuning:
 
 Mobile portrait uses a separate default shot tuned around the foreground tower. URL camera parameters still override it.
 
-Examples:
+## Main files
 
 ```text
-http://127.0.0.1:5181/a-journey/?quality=low
-http://127.0.0.1:5181/a-journey/?quality=high&fps=60
-http://127.0.0.1:5181/a-journey/?fov=50&dof=0.45&camX=-74&yaw=3.055&pitch=0.335
-```
-
-## Rendering Profiles
-
-`quality=balanced` is the default. It targets a quiet profile around 30fps, DPR capped at 1, and an internal pixel budget around 900k. The current default shot keeps dense near grass while using stable distance LOD and terrain/grassland shader detail to avoid expensive far-field blades.
-
-`quality=low` reduces render scale, terrain detail, grass density, tower count, and wire samples. `quality=high` restores higher render scale, denser grass, more wire samples, and higher scene density for screenshots or stronger machines.
-
-## Verification
-
-The Playwright verifier captures screenshots, checks for page errors, confirms that the scene is not black, verifies camera movement, and reads debug stats. Start the dev server before running these commands, and replace the port in `TARGET_URL` if Vite is not running on `5181`.
-
-Run the default desktop check:
-
-```bash
-TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify
-```
-
-Run mobile checks when rendering, input, layout, audio, or performance behavior changes:
-
-```bash
-TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile
-TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile:landscape
-TARGET_URL="http://127.0.0.1:5181/a-journey/" npm run verify:mobile:no-fullscreen
-```
-
-Verifier screenshots are written to `artifacts/`, which is ignored by Git.
-
-## Deployment
-
-`vite.config.ts` sets the Vite base path to `/a-journey/`. The GitHub Pages workflow in `.github/workflows/deploy.yml` builds `dist/` and deploys it when `main` is pushed.
-
-## Project Structure
-
-```text
+README.md                Project overview and run/verify commands
+AGENTS.md                Agent and contributor guidance
+TODO.md                  Small follow-up tasks and known issues
 .github/workflows/       GitHub Pages deployment workflow
-docs/                    Architecture, development, agent workflow, and task handoff docs
 public/                  Static public assets and web manifest
-scripts/                 Playwright verification scripts
+scripts/                 Playwright smoke verifier
 src/main.ts              Browser entry point
-src/style.css            Page, canvas, and mobile control styles
-src/app/                 App shell, render loop, quality controls, mobile fullscreen UI
+src/style.css            Page, canvas, debug overlay, and mobile control styles
+src/app/App.ts           App shell, render loop, quality controls, mobile fullscreen UI
 src/audio/               Background audio startup and broadcast effect
-src/assets/              Mesh utilities, procedural mesh builders, and runtime assets
+src/assets/              Runtime assets, mesh utilities, and procedural builders
 src/math/                Lightweight math, RNG, and noise helpers
 src/renderer/            WebGL2 buffer, shader, framebuffer, and fullscreen-pass helpers
-src/scene/               Scene systems, camera, input, config, and debug overlay
-src/shaders/             GLSL shader strings grouped by render system
+src/scene/Scene.ts       Scene orchestration, render order, config overrides, stats
+src/scene/SceneConfig.ts Typed scene defaults and tuning values
+src/scene/Input.ts       Keyboard, pointer, and touch controls
+src/shaders/             GLSL shader strings grouped by visual feature
 index.html               Vite HTML entry
 vite.config.ts           Vite config and GitHub Pages base path
 package.json             npm scripts and dependency metadata
-AGENTS.md                Stable agent operating contract
 ```
+
+## Deployment
+
+`vite.config.ts` sets the Vite base path to `/a-journey/`. The GitHub Pages workflow builds `dist/` and deploys it when `main` is pushed.
 
 ## Notes
 
-- Coding agents should read `AGENTS.md` and the docs in `docs/` before changing the project.
-- `docs/TASK_LOG.md` is the cross-session handoff log for long tasks.
+- Keep the project small and flat.
+- Prefer preserving existing behavior over broad rewrites.
 - `src/assets/audio/background.mp3` is the runtime background track.
-- `target/` is reserved for local reference images and is not required at runtime.
-- `demo/` is reserved for local technical demos used as reference during migration work.
+- `target/` and `demo/` are local reference folders and are not required at runtime.
 - `node_modules/`, `dist/`, `artifacts/`, `target/`, and `demo/` are ignored by Git.
