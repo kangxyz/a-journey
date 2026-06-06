@@ -14,6 +14,14 @@ A-JOURNEY is a lightweight Vite + TypeScript + WebGL2 first-person atmosphere sc
 - Touch controls, mobile fullscreen helpers, and touch-unlocked audio.
 - URL-controlled quality profiles and shot-tuning parameters.
 
+## Documentation Map
+
+- `AGENTS.md` is the stable operating contract for coding agents.
+- `docs/ARCHITECTURE.md` explains runtime flow, module boundaries, render order, target structure, and game-scene extension seams.
+- `docs/DEVELOPMENT.md` covers local commands, URL/debug controls, verification, change playbooks, deployment notes, and git hygiene.
+- `docs/AGENT_WORKFLOW.md` defines startup, long-running task, handoff, and multi-agent coordination protocols.
+- `docs/TASK_LOG.md` is the durable cross-session handoff log for long tasks and future agents.
+
 ## Quick Start
 
 Requirements: a recent Node.js runtime and npm.
@@ -121,6 +129,7 @@ Verifier screenshots are written to `artifacts/`, which is ignored by Git.
 
 ```text
 .github/workflows/       GitHub Pages deployment workflow
+docs/                    Architecture, development, agent workflow, and task handoff docs
 public/                  Static public assets and web manifest
 scripts/                 Playwright verification scripts
 src/main.ts              Browser entry point
@@ -135,12 +144,13 @@ src/shaders/             GLSL shader strings grouped by render system
 index.html               Vite HTML entry
 vite.config.ts           Vite config and GitHub Pages base path
 package.json             npm scripts and dependency metadata
-AGENTS.md                General development rules for coding agents
+AGENTS.md                Stable agent operating contract
 ```
 
 ## Notes
 
-- Coding agents should read `AGENTS.md` before changing the project.
+- Coding agents should read `AGENTS.md` and the docs in `docs/` before changing the project.
+- `docs/TASK_LOG.md` is the cross-session handoff log for long tasks.
 - `src/assets/audio/background.mp3` is the runtime background track.
 - `target/` is reserved for local reference images and is not required at runtime.
 - `demo/` is reserved for local technical demos used as reference during migration work.
